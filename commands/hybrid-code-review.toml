@@ -1,0 +1,11 @@
+description = "Five-pass PR review ending in a simulated technical-defense grilling."
+
+prompt = """
+Read the file `skills/hybrid-code-review/SKILL.md` inside this extension's directory \
+and follow its five-phase method exactly, in order.
+
+Target of the review: {{args}}
+
+If no target was given, review the current branch against its merge base with the \
+default branch, and say which base you picked.
+"""

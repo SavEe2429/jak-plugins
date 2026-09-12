@@ -1,0 +1,6 @@
+{
+  "name": "hybrid-code-review",
+  "version": "0.1.0",
+  "description": "Five-pass PR review ending in a simulated technical-defense grilling.",
+  "contextFileName": "GEMINI.md"
+}

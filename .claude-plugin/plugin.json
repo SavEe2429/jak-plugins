@@ -1,0 +1,15 @@
+{
+  "name": "hybrid-code-review",
+  "description": "Five-pass PR review that ends in a simulated technical-defense grilling: intent, architecture map, call chain, contracts and invariants, then the questions a senior architect will actually ask — with model answers.",
+  "version": "0.1.0",
+  "author": {
+    "name": "SavEe2429"
+  },
+  "keywords": [
+    "code-review",
+    "pull-request",
+    "technical-defense",
+    "onboarding",
+    "architecture"
+  ]
+}
