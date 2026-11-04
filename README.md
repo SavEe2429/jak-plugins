@@ -1,6 +1,7 @@
 # jak-plugins
 
-A skill bundle for **Claude Code**, **OpenAI Codex (GPT)** and **Gemini CLI**.
+A skill bundle for **Claude** (Claude Code), **GPT** (OpenAI Codex CLI) and
+**Gemini** (Antigravity and Gemini CLI).
 One `skills/` folder, thin adapters for each host.
 
 | Skill | What it does |
@@ -13,6 +14,7 @@ One `skills/` folder, thin adapters for each host.
 ```text
 skills/<name>/SKILL.md                              single source of truth (Agent Skills format)
 .claude-plugin/                                     Claude Code plugin + marketplace manifests
+plugin.json                                         Antigravity plugin manifest
 AGENTS.md, prompts/*.md                             OpenAI Codex CLI
 gemini-extension.json, GEMINI.md, commands/*.toml   Gemini CLI extension
 ```
@@ -47,6 +49,16 @@ done
 
 For a single repo you can instead append `AGENTS.md` to that repo's own `AGENTS.md`
 and fix the relative paths.
+
+## Antigravity (Gemini)
+
+```bash
+git clone https://github.com/SavEe2429/jak-plugins ~/.gemini/config/plugins/jak-plugins
+```
+
+Restart Antigravity. `plugin.json` registers the bundle and `skills/` is picked up
+automatically. If the same skills also sit in `~/.gemini/config/skills/`, delete those
+copies so they do not load twice.
 
 ## Gemini CLI
 

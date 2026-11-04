@@ -1,0 +1,13 @@
+{
+  "name": "jak-plugins",
+  "displayName": "Jak Plugins",
+  "description": "Agent toolkit: project-scaffolder (scaffold or audit projects) and skill-factory (select and compose skills, plugins, MCP servers and tools for a task).",
+  "version": "0.3.0",
+  "author": { "name": "SavEe2429" },
+  "repository": "https://github.com/SavEe2429/jak-plugins",
+  "suggestedPrompts": [
+    "Scaffold a new FastAPI project with tests and CI",
+    "Audit this project's structure and engineering setup",
+    "Which skills, plugins and MCP servers should I use for this task?"
+  ]
+}
