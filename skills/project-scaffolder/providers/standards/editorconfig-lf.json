@@ -1,0 +1,20 @@
+{
+  "id": "standards.editorconfig-lf",
+  "kind": "standards",
+  "schema_version": 1,
+  "capabilities": ["standard-metadata", "existing-rule-detection"],
+  "matches": [{ "path": ".editorconfig", "contains": "end_of_line = lf", "weight": 5 }],
+  "payload": {
+    "name": "Repository LF line endings",
+    "classification": "team-convention",
+    "source": { "type": "repository-config", "path": ".editorconfig" },
+    "scope": ["text-files"],
+    "applicability": "existing-project-rule",
+    "requirement": "recommended",
+    "conflicts": [],
+    "dependencies": [],
+    "enforcement": { "configuration": ".editorconfig" },
+    "verification": { "kind": "static-inspection", "claim": "rule-declared" },
+    "last_reviewed": "2026-11-02"
+  }
+}

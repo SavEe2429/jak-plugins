@@ -1,0 +1,52 @@
+{
+  "id": "package-manager.unity-upm",
+  "kind": "package_manager",
+  "schema_version": 1,
+  "capabilities": [
+    "manifest",
+    "lockfile"
+  ],
+  "matches": [
+    {
+      "path": "Packages/manifest.json",
+      "weight": 5
+    }
+  ],
+  "payload": {
+    "manager": "unity-upm",
+    "executable": "unity",
+    "version_probe": [],
+    "manifests": [
+      "Packages/manifest.json"
+    ],
+    "lockfiles": [
+      "Packages/packages-lock.json"
+    ],
+    "lockfile_policy": "required",
+    "inventory_parser": {
+      "path": "Packages/packages-lock.json",
+      "format": "unity-upm-lock-json",
+      "scope": "unity-lock-depth",
+      "limitation": "Direct/transitive scope follows the lockfile depth field only; no vulnerability or license checks are performed."
+    },
+    "manifest_generation": {
+      "path": "Packages/manifest.json",
+      "runtime_dependencies_field": "dependencies",
+      "static_fields": {}
+    },
+    "dependency_groups": [
+      "runtime",
+      "development",
+      "platform-specific"
+    ],
+    "version_strategy": "manager-defined",
+    "registry_config_paths": [
+      "Packages/manifest.json"
+    ],
+    "locked_install": [],
+    "add": [],
+    "remove": [],
+    "update": [],
+    "audit": []
+  }
+}

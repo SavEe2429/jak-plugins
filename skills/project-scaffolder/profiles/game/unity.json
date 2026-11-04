@@ -1,0 +1,81 @@
+{
+  "domain": "game",
+  "stack": "unity",
+  "name": "Unity Game Engine (URP / 2D / 3D)",
+  "markers": [
+    "ProjectSettings/ProjectVersion.txt",
+    "Assets"
+  ],
+  "directories": [
+    "Assets/Scripts/Core",
+    "Assets/Scripts/Runtime",
+    "Assets/Tests/EditMode",
+    "Assets/Tests/PlayMode",
+    "Assets/Prefabs",
+    "Assets/Materials",
+    "Assets/Audio",
+    "Assets/Animations",
+    "Assets/Sprites",
+    "Assets/Shaders",
+    "Assets/Scenes",
+    "ProjectSettings",
+    "logbook",
+    "Docs"
+  ],
+  "architecture_layouts": {
+    "component_based": [
+      "Assets/Scripts/Runtime",
+      "Assets/Tests/EditMode",
+      "Assets/Tests/PlayMode"
+    ],
+    "modular_monolith": [
+      "Assets/Scripts/Core",
+      "Assets/Scripts/Runtime",
+      "Assets/Tests/EditMode",
+      "Assets/Tests/PlayMode"
+    ],
+    "ecs": [
+      "Assets/Scripts/Components",
+      "Assets/Scripts/Systems",
+      "Assets/Scripts/Authoring",
+      "Assets/Tests/EditMode",
+      "Assets/Tests/PlayMode"
+    ]
+  },
+  "architecture_common_directories": [
+    "Assets/Prefabs",
+    "Assets/Materials",
+    "Assets/Audio",
+    "Assets/Animations",
+    "Assets/Sprites",
+    "Assets/Shaders",
+    "Assets/Scenes",
+    "ProjectSettings",
+    "logbook",
+    "Docs"
+  ],
+  "lfs_patterns": [
+    "*.psd",
+    "*.fbx",
+    "*.blend",
+    "*.wav",
+    "*.mp3",
+    "*.unitypackage",
+    "*.zip"
+  ],
+  "entry_points": [
+    {
+      "path": "Assets/Scripts/Core/CoreMath.cs",
+      "description": "Domain-agnostic foundational math utility",
+      "template": "namespace {project_name}.Core\n{\n    public static class CoreMath\n    {\n        public static float Clamp(float val, float min, float max)\n        {\n            if (val < min) return min;\n            if (val > max) return max;\n            return val;\n        }\n\n        public static float SafeDivide(float numerator, float denominator, float fallback = 0f)\n        {\n            if (System.Math.Abs(denominator) < 0.00001f)\n            {\n                return fallback;\n            }\n            return numerator / denominator;\n        }\n    }\n}\n"
+    }
+  ],
+  "smoke_tests": [
+    {
+      "path": "Assets/Tests/EditMode/CoreMathTests.cs",
+      "description": "Pure EditMode unit smoke test",
+      "template": "using NUnit.Framework;\nusing {project_name}.Core;\n\nnamespace {project_name}.Tests.EditMode\n{\n    public class CoreMathTests\n    {\n        [Test]\n        public void Clamp_ValueWithinRange_ReturnsValue()\n        {\n            float result = CoreMath.Clamp(5f, 0f, 10f);\n            Assert.AreEqual(5f, result, 0.001f);\n        }\n\n        [Test]\n        public void SafeDivide_DivideByZero_ReturnsFallback()\n        {\n            float result = CoreMath.SafeDivide(10f, 0f, 42f);\n            Assert.AreEqual(42f, result, 0.001f);\n        }\n    }\n}\n"
+    }
+  ],
+  "ci_workflow": "name: {project_name} CI Pipeline\n\non:\n  push:\n    branches: [ main, develop ]\n  pull_request:\n    branches: [ main, develop ]\n\njobs:\n  hygiene:\n    name: Code Hygiene & Pre-commit Check\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout Code\n        uses: actions/checkout@v4\n      - name: Verify Strict LF Line Endings\n        run: |\n          if grep -r $'\\r' --exclude-dir=.git --exclude-dir=Library .; then\n            echo \"CRLF detected! Enforce LF line endings.\"\n            exit 1\n          fi\n      - name: Run Pre-commit Hooks\n        uses: pre-commit/action@v3.0.1\n\n  test:\n    name: Unity EditMode & PlayMode Tests\n    needs: hygiene\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout Code\n        uses: actions/checkout@v4\n        with:\n          lfs: true\n      - name: Cache Library\n        uses: actions/cache@v4\n        with:\n          path: Library\n          key: Library-{{ runner.os }}-{{ hashFiles('Assets/**', 'Packages/**') }}\n      - name: Run Unity Tests\n        uses: game-ci/unity-test-runner@v4\n        env:\n          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}\n          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}\n          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}\n        with:\n          projectPath: .\n          testMode: EditMode\n          artifactsPath: Logs/test-results\n"
+}

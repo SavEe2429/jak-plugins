@@ -1,0 +1,20 @@
+{
+  "id": "architecture.layered",
+  "kind": "architecture",
+  "schema_version": 1,
+  "capabilities": ["directory-layout", "dependency-direction"],
+  "payload": {
+    "description": "A presentation, application, and infrastructure layout selected explicitly by the user.",
+    "directories": [
+      { "path": "src/presentation", "reason": "presentation boundary" },
+      { "path": "src/application", "reason": "application boundary" },
+      { "path": "src/infrastructure", "reason": "infrastructure boundary" }
+    ],
+    "constraints": [
+      "Presentation depends on application abstractions.",
+      "Infrastructure must not define application policy."
+    ],
+    "tradeoffs": ["Simple for small services.", "May add indirection for small programs."],
+    "supported_template_capabilities": ["layered-layout"]
+  }
+}

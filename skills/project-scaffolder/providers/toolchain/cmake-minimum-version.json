@@ -1,0 +1,20 @@
+{
+  "id": "toolchain.cmake-minimum-version",
+  "kind": "toolchain",
+  "schema_version": 1,
+  "capabilities": ["version-declaration", "runtime-probe", "build-tool-detection"],
+  "matches": [{ "path": "CMakeLists.txt", "contains": "cmake_minimum_required", "weight": 5 }],
+  "payload": {
+    "runtime": "cmake",
+    "version_file": "CMakeLists.txt",
+    "probe": ["cmake", "--version"],
+    "version_pattern": "cmake_minimum_required\\s*\\(\\s*VERSION\\s+(?P<version>\\d+(?:\\.\\d+)+)",
+    "detected_pattern": "cmake version (?P<version>\\d+(?:\\.\\d+)+)",
+    "version_policy": "minimum",
+    "requirement_level": "minimum-supported",
+    "version_requirement_source": "project-declared",
+    "environment_preparation": [
+      "Install CMake at or above the version declared by cmake_minimum_required, then re-run the policy audit."
+    ]
+  }
+}

@@ -1,19 +1,12 @@
-# Hybrid Code Review & Technical Defense
+# Jak Plugins - skill index
 
-This extension carries one method: a five-pass read of a PR or diff that ends in a
-simulated technical-defense grilling.
+This bundle carries two skills. Each lives in `skills/<name>/SKILL.md` next to this
+file. When a request matches a row below, **read that SKILL.md first and follow it**;
+its scripts and references are resolved relative to the skill's own folder.
 
-Use it when the user has to **explain or defend** a change to someone else — a reviewer,
-a lead, an examiner — or when they need to understand an unfamiliar diff fast. Typical
-openings: "ต้องดีเฟนด์ PR นี้", "อธิบาย PR นี้ให้หน่อย", "เตรียมตอบคำถามอาจารย์",
-"prep me to defend this branch", "what will they ask about this PR".
+| Skill | Use when |
+|---|---|
+| `project-scaffolder` | Starting or scaffolding a new app/project, planning its engineering foundation, building the first program in an empty target, or auditing an existing project's structure. |
+| `skill-factory` | Discovering, evaluating, selecting or composing skills, plugins, MCP servers and tools for a task; auditing installed skills; deciding whether a repeated workflow should become a skill. |
 
-It is not an approve/reject review and it does not produce diagrams as files.
-
-**The method lives in `skills/hybrid-code-review/SKILL.md` inside this extension
-directory. Read that file before starting, and follow it in order.** It is the single
-source of truth; this file only says when to reach for it.
-
-The one rule worth repeating here, because it is the one most easily skipped: do not
-read the diff until you have mapped where the changed files sit in the architecture. A
-diff read out of context looks plausible even when it breaks a layering rule.
+Only load the skill that fits. Do not read both up front.

@@ -1,0 +1,35 @@
+{
+  "domain": "systems",
+  "stack": "rust",
+  "name": "Rust Systems / CLI Application",
+  "markers": [
+    "Cargo.toml"
+  ],
+  "directories": [
+    "src/commands",
+    "src/core",
+    "src/config",
+    "src/error",
+    "tests/integration",
+    "benches",
+    "examples",
+    "logbook",
+    "Docs"
+  ],
+  "lfs_patterns": [],
+  "entry_points": [
+    {
+      "path": "src/lib.rs",
+      "description": "Foundational library entry point",
+      "template": "//! Foundational library module for {project_name}.\n\npub fn add(a: i32, b: i32) -> i32 {\n    a + b\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_internal_add() {\n        assert_eq!(add(2, 3), 5);\n    }\n}\n"
+    }
+  ],
+  "smoke_tests": [
+    {
+      "path": "tests/smoke_test.rs",
+      "description": "Integration smoke test fixture",
+      "template": "use {project_name}::add;\n\n#[test]\nfn test_smoke_add() {\n    assert_eq!(add(10, 20), 30);\n}\n"
+    }
+  ],
+  "ci_workflow": "name: {project_name} CI Pipeline\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  test:\n    name: Rust Check & Tests\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: dtolnay/rust-toolchain@stable\n        with:\n          components: clippy, rustfmt\n      - name: Check Formatting\n        run: cargo fmt --all -- --check\n      - name: Run Clippy\n        run: cargo clippy -- -D warnings\n      - name: Run Tests\n        run: cargo test --verbose\n"
+}

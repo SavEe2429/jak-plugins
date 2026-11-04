@@ -1,6 +1,6 @@
 {
-  "name": "hybrid-code-review",
-  "version": "0.1.0",
-  "description": "Five-pass PR review ending in a simulated technical-defense grilling.",
+  "name": "jak-plugins",
+  "version": "0.3.0",
+  "description": "Agent toolkit: project-scaffolder and skill-factory skills.",
   "contextFileName": "GEMINI.md"
 }

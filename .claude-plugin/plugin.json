@@ -1,15 +1,10 @@
 {
-  "name": "hybrid-code-review",
-  "description": "Five-pass PR review that ends in a simulated technical-defense grilling: intent, architecture map, call chain, contracts and invariants, then the questions a senior architect will actually ask — with model answers.",
-  "version": "0.1.0",
+  "name": "jak-plugins",
+  "description": "Agent toolkit: project-scaffolder (scaffold/audit projects) and skill-factory (select and compose skills, plugins and tools).",
+  "version": "0.3.0",
   "author": {
     "name": "SavEe2429"
   },
-  "keywords": [
-    "code-review",
-    "pull-request",
-    "technical-defense",
-    "onboarding",
-    "architecture"
-  ]
+  "repository": "https://github.com/SavEe2429/jak-plugins",
+  "keywords": ["scaffolding", "project-setup", "skills", "plugins", "mcp", "tooling"]
 }

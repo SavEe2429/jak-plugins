@@ -1,0 +1,42 @@
+{
+  "domain": "embedded",
+  "stack": "platformio",
+  "name": "PlatformIO Embedded / ESP32",
+  "markers": [
+    "platformio.ini"
+  ],
+  "directories": [
+    "src",
+    "include",
+    "lib/drivers",
+    "lib/protocols",
+    "lib/sensors",
+    "test/unit",
+    "test/hil",
+    "data",
+    "logbook",
+    "Docs"
+  ],
+  "lfs_patterns": [
+    "*.bin",
+    "*.hex",
+    "*.elf",
+    "*.step",
+    "*.stl"
+  ],
+  "entry_points": [
+    {
+      "path": "src/main.cpp",
+      "description": "Embedded application entry point",
+      "template": "#include <Arduino.h>\n\nvoid setup() {\n  Serial.begin(115200);\n  Serial.println(\"Booting {project_name}...\");\n}\n\nvoid loop() {\n  delay(1000);\n}\n"
+    }
+  ],
+  "smoke_tests": [
+    {
+      "path": "test/unit/test_calc.cpp",
+      "description": "Unity test runner fixture",
+      "template": "#include <unity.h>\n\nvoid test_addition(void) {\n  TEST_ASSERT_EQUAL(5, 2 + 3);\n}\n"
+    }
+  ],
+  "ci_workflow": "name: {project_name} CI Pipeline\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-python@v5\n      - run: pip install platformio\n      - run: pio run\n"
+}

@@ -1,0 +1,41 @@
+{
+  "domain": "web",
+  "stack": "nextjs",
+  "name": "Next.js React Fullstack Web Application",
+  "markers": [
+    "next.config.js",
+    "next.config.mjs",
+    "next.config.ts",
+    "package.json:next"
+  ],
+  "directories": [
+    "src/app",
+    "src/components/ui",
+    "src/components/features",
+    "src/hooks",
+    "src/lib/api",
+    "src/lib/utils",
+    "src/types",
+    "public",
+    "tests/unit",
+    "tests/e2e",
+    "logbook",
+    "Docs"
+  ],
+  "lfs_patterns": [],
+  "entry_points": [
+    {
+      "path": "src/lib/utils/format.ts",
+      "description": "Baseline formatting utility",
+      "template": "/** Foundational utility for {project_name} */\nexport function formatLabel(name: string): string {\n  return name.trim().toLowerCase();\n}\n"
+    }
+  ],
+  "smoke_tests": [
+    {
+      "path": "tests/unit/format.test.ts",
+      "description": "Unit smoke test fixture",
+      "template": "import { describe, it, expect } from 'vitest';\nimport { formatLabel } from '../../src/lib/utils/format';\n\ndescribe('formatLabel', () => {\n  it('formats lowercase label correctly', () => {\n    expect(formatLabel('  MyProject ')).toBe('myproject');\n  });\n});\n"
+    }
+  ],
+  "ci_workflow": "name: {project_name} CI Pipeline\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  build-and-test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: pnpm/action-setup@v3\n      - uses: actions/setup-node@v4\n        with:\n          cache: pnpm\n      - run: pnpm install --frozen-lockfile\n      - run: pnpm lint\n      - run: pnpm test\n      - run: pnpm build\n"
+}

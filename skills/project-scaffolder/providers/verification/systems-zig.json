@@ -1,0 +1,89 @@
+{
+  "id": "verification.profile.systems.zig",
+  "kind": "verification",
+  "schema_version": 1,
+  "capabilities": [
+    "verification-checks",
+    "project-readiness-policy"
+  ],
+  "payload": {
+    "checks": [
+      {
+        "id": "test-1",
+        "kind": "test",
+        "command": [
+          "zig",
+          "test",
+          "tests/smoke_test.zig"
+        ],
+        "required": true,
+        "expected_evidence": {
+          "requires_assertions": true
+        },
+        "execution_policy": {
+          "mode": "exact-argv",
+          "allowed_argv": [
+            "zig",
+            "test",
+            "tests/smoke_test.zig"
+          ],
+          "cwd_scope": "project-root",
+          "network_policy": "may-access-network",
+          "write_effects": [
+            "project-workspace"
+          ],
+          "timeout_seconds": 180,
+          "output_limit": 800,
+          "requires_confirmation": true
+        }
+      },
+      {
+        "id": "build-1",
+        "kind": "build",
+        "command": [
+          "zig",
+          "build"
+        ],
+        "required": true,
+        "expected_evidence": {},
+        "execution_policy": {
+          "mode": "exact-argv",
+          "allowed_argv": [
+            "zig",
+            "build"
+          ],
+          "cwd_scope": "project-root",
+          "network_policy": "may-access-network",
+          "write_effects": [
+            "project-workspace"
+          ],
+          "timeout_seconds": 240,
+          "output_limit": 800,
+          "requires_confirmation": true
+        }
+      }
+    ],
+    "project_policy": {
+      "config_manifests": [
+        "build.zig"
+      ],
+      "module_boundary_patterns": [
+        "build.zig"
+      ],
+      "mandatory_categories": [
+        1,
+        2,
+        4,
+        5,
+        7,
+        11,
+        13,
+        19
+      ],
+      "na_categories": [
+        3,
+        18
+      ]
+    }
+  }
+}

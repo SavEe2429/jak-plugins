@@ -1,0 +1,93 @@
+{
+  "domain": "ai_data",
+  "stack": "python_pipeline",
+  "name": "AI / Machine Learning Data Pipeline",
+  "markers": [
+    "pyproject.toml:torch",
+    "pyproject.toml:pandas",
+    "requirements.txt:torch",
+    "requirements.txt:pandas",
+    "notebooks"
+  ],
+  "directories": [
+    "src/data/raw",
+    "src/data/processed",
+    "src/features",
+    "src/models/training",
+    "src/models/evaluation",
+    "src/pipelines",
+    "src/utils",
+    "notebooks",
+    "configs",
+    "tests/unit",
+    "tests/pipeline",
+    "logbook",
+    "Docs"
+  ],
+  "lfs_patterns": [
+    "*.pt",
+    "*.pth",
+    "*.onnx",
+    "*.parquet"
+  ],
+  "entry_points": [
+    {
+      "path": "src/utils/data_check.py",
+      "description": "Foundational data processing check",
+      "template": "\"\"\"Data utility functions for {project_name}.\"\"\"\n\ndef validate_batch_size(size: int) -> bool:\n    return size > 0 and (size & (size - 1)) == 0\n"
+    },
+    {
+      "path": "pyproject.toml",
+      "description": "uv project and Python tooling configuration",
+      "template": "[project]\nname = \"{project_name}\"\nversion = \"0.1.0\"\ndescription = \"Python machine-learning data pipeline\"\nreadme = \"README.md\"\nrequires-python = \">=3.11\"\ndependencies = []\n\n[dependency-groups]\ndev = [\"pre-commit>=4\", \"pytest>=8\", \"ruff>=0.17\"]\nml = [\"numpy\", \"pandas\", \"scikit-learn\"]\n\n[tool.uv]\ndefault-groups = [\"dev\"]\npackage = false\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\npythonpath = [\".\"]\naddopts = \"-ra\"\n\n[tool.ruff]\nline-length = 100\ntarget-version = \"py311\"\n\n[tool.ruff.lint]\nselect = [\"E\", \"F\", \"I\", \"UP\", \"B\"]\n"
+    },
+    {
+      "path": ".pre-commit-config.yaml",
+      "description": "Python, repository hygiene, and Markdown lint hooks",
+      "template": "default_install_hook_types:\n  - pre-commit\n  - commit-msg\n\nrepos:\n  - repo: https://github.com/pre-commit/pre-commit-hooks\n    rev: v6.0.0\n    hooks:\n      - id: trailing-whitespace\n      - id: end-of-file-fixer\n      - id: check-yaml\n      - id: check-json\n      - id: check-toml\n      - id: check-merge-conflict\n      - id: check-added-large-files\n        args: [\"--maxkb=5000\"]\n\n  - repo: https://github.com/astral-sh/ruff-pre-commit\n    rev: v0.17.3\n    hooks:\n      - id: ruff\n        args: [\"--no-fix\"]\n      - id: ruff-format\n        args: [\"--check\"]\n\n  - repo: https://github.com/DavidAnson/markdownlint-cli2\n    rev: v0.24.0\n    hooks:\n      - id: markdownlint-cli2\n\n  - repo: https://github.com/compilerla/conventional-pre-commit\n    rev: v4.4.0\n    hooks:\n      - id: conventional-pre-commit\n        stages: [commit-msg]\n        args: [--strict, feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert]\n"
+    },
+    {
+      "path": ".markdownlint-cli2.yaml",
+      "description": "Markdown lint rules for project documentation",
+      "template": "config:\n  default: true\n  MD013: false\n  MD041: false\nignores:\n  - \".venv/**\"\n  - \"artifacts/**\"\n  - \"uv.lock\"\n"
+    },
+    {
+      "path": ".editorconfig",
+      "description": "Cross-editor text and line-ending conventions",
+      "template": "root = true\n\n[*]\ncharset = utf-8\nend_of_line = lf\ninsert_final_newline = true\ntrim_trailing_whitespace = true\nindent_style = space\nindent_size = 4\n\n[*.md]\ntrim_trailing_whitespace = false\n\n[*.{json,yml,yaml,toml}]\nindent_size = 2\n"
+    },
+    {
+      "path": ".gitignore",
+      "description": "Python, uv, test, and generated ML artifact ignores",
+      "template": ".venv/\n__pycache__/\n*.py[cod]\n.pytest_cache/\n.ruff_cache/\n.coverage\nhtmlcov/\n\n# Keep local/raw datasets and generated model outputs out of Git by default.\n/data/raw/*\n!/data/raw/.gitkeep\n/artifacts/\n"
+    },
+    {
+      "path": "README.md",
+      "description": "Getting started and project workflow documentation",
+      "template": "# {project_name}\n\nStarter structure for a Python machine-learning data pipeline. The scaffold\nprovides engineering conventions; select the model, data source, evaluation\nmethod, and deployment flow from the actual project requirements.\n\n## Tooling\n\n- uv manages the Python project, dependency groups, and lockfile.\n- pytest runs tests; Ruff checks and formats Python.\n- pre-commit runs repository hooks, including Markdown lint.\n\n## Set up when ready\n\n```bash\nuv lock\nuv sync\nuv sync --group ml\nuv run pytest\n```\n\n`uv lock` resolves and writes `uv.lock`; `uv sync` installs the selected\nproject dependencies. The scaffold does not run these commands or install\npackages. Review and commit the lockfile before relying on locked CI runs.\n\nSee `CONTRIBUTING.md` for pull request and Conventional Commits rules. The\npre-commit config checks Python, repository hygiene, and Markdown; it also\nvalidates commit messages after hook installation.\n\n## Quality checks\n\n```bash\nuv run ruff check .\nuv run ruff format --check .\nuv run pre-commit install --install-hooks\nuv run pre-commit run --all-files\n```\n\nRaw datasets and generated model artifacts are ignored by default. Confirm data\nhandling, privacy, and artifact retention rules before changing those ignores.\n"
+    },
+    {
+      "path": "AGENTS.md",
+      "description": "Project-specific Python workflow and data handling instructions",
+      "template": "# Project Instructions\n\n## Commands\n\n- Install the project environment only when authorized: `uv sync`.\n- Add the optional machine-learning dependency group when needed: `uv sync --group ml`.\n- Run tests: `uv run pytest`.\n- Run static checks: `uv run ruff check .` and `uv run ruff format --check .`.\n- Run repository hooks: `uv run pre-commit run --all-files`.\n\n## Engineering rules\n\n- Keep application code under `src/` and tests under `tests/`.\n- Use deterministic seeds and holdout data for model evaluation where applicable.\n- Do not commit raw datasets, credentials, or generated model artifacts by default.\n- Declare dependency changes in `pyproject.toml`; regenerate and review `uv.lock`.\n- Keep text files UTF-8 with LF endings.\n- Report tests and checks that were actually run; do not infer success from configuration files.\n"
+    },
+    {
+      "path": ".github/PULL_REQUEST_TEMPLATE.md",
+      "description": "Pull request review template with test and ML impact checklist",
+      "template": "## Summary\n\n<!-- Describe the change, its reason, and the expected behavior. -->\n\n## Change type\n\n- [ ] Feature\n- [ ] Bug fix\n- [ ] Refactor\n- [ ] Documentation or tooling\n- [ ] Breaking change\n\n## Verification\n\n- [ ] Tests added or updated for the change.\n- [ ] Commands run and results are recorded below.\n- [ ] Lint and formatting checks pass.\n\nCommands and results:\n\n```text\n<!-- Example: uv run pytest -->\n```\n\n## Data and model impact\n\n- [ ] No data or model behavior changed.\n- [ ] Data sources, schema, privacy, or retention changed and are documented.\n- [ ] Training/evaluation method, metrics, seed, or reproducibility changed and are documented.\n- [ ] Dependency or lockfile changes are intentional and reviewed.\n\n## Review\n\n- [ ] Documentation and configuration are updated where needed.\n- [ ] No credentials, private data, or generated model artifacts are included.\n- [ ] Remaining limitations are listed below.\n\nLimitations:\n\n<!-- Write \"None\" or describe what remains unverified. -->\n"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "description": "Contribution workflow and Conventional Commits standard",
+      "template": "# Contributing\n\n## Local checks\n\nUse the commands in `README.md`. Install the repository hooks after the project\nenvironment is set up:\n\n```bash\nuv run pre-commit install --install-hooks\nuv run pre-commit run --all-files\n```\n\nThe installed `pre-commit` hook checks changed files. The `commit-msg` hook\nchecks the commit subject before Git creates a commit.\n\n## Commit messages\n\nUse the Conventional Commits format:\n\n```text\n<type>(<optional scope>): <short description>\n```\n\nAllowed types are `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`,\n`build`, `ci`, `chore`, and `revert`. Keep the subject concise and describe the\nchange, not the issue number alone. Use `!` after the type or scope for a\nbreaking change and explain the impact in the body or footer.\n\nExamples:\n\n- `feat(training): add baseline model evaluation`\n- `fix(data): reject empty input batches`\n- `docs: explain the uv setup workflow`\n- `refactor(pipeline)!: rename the prediction output field`\n\n## Pull requests\n\nUse `.github/PULL_REQUEST_TEMPLATE.md`. Include actual test and lint results,\nand identify data, model, dependency, and reproducibility impacts. Do not claim\nchecks passed when they were not run.\n"
+    }
+  ],
+  "smoke_tests": [
+    {
+      "path": "tests/unit/test_data_check.py",
+      "description": "Pytest pipeline smoke test",
+      "template": "from src.utils.data_check import validate_batch_size\n\ndef test_batch_size_power_of_two():\n    assert validate_batch_size(32) is True\n    assert validate_batch_size(33) is False\n"
+    }
+  ],
+  "ci_workflow": "name: {project_name} CI\n\non:\n  push:\n    branches: [main]\n  pull_request:\n    branches: [main]\n\njobs:\n  quality:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: astral-sh/setup-uv@v10.3.2\n        with:\n          python-version: \"3.11\"\n      - run: uv sync --frozen --all-groups\n      - run: uv run pytest\n      - run: uv run ruff check .\n      - run: uv run ruff format --check .\n      - run: uv run pre-commit run --all-files\n"
+}

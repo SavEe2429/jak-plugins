@@ -1,0 +1,108 @@
+{
+  "id": "package-manager.go-modules",
+  "kind": "package_manager",
+  "schema_version": 1,
+  "capabilities": [
+    "manifest",
+    "lockfile",
+    "dependency-audit"
+  ],
+  "matches": [
+    {
+      "path": "go.mod",
+      "contains": "module ",
+      "weight": 5
+    }
+  ],
+  "payload": {
+    "manager": "go",
+    "executable": "go",
+    "version_probe": [
+      "go",
+      "version"
+    ],
+    "manifests": [
+      "go.mod"
+    ],
+    "lockfiles": [
+      "go.sum"
+    ],
+    "lockfile_policy": "required",
+    "inventory_parser": {
+      "path": "go.sum",
+      "format": "go-sum-lines",
+      "scope": "checksum-recorded-module-versions",
+      "limitation": "go.sum is checksum evidence, not a complete resolved dependency graph; direct/transitive status is not inferred."
+    },
+    "lock_check": {
+      "command": [
+        "go",
+        "mod",
+        "tidy",
+        "-diff"
+      ],
+      "network_policy": "may-access-network",
+      "allow_missing_lockfiles": true,
+      "description": "Check whether go.mod and go.sum need changes for the source package graph without writing those files.",
+      "write_effects": [
+        "package-manager-cache"
+      ],
+      "timeout_seconds": 300,
+      "output_limit": 800,
+      "requires_confirmation": true
+    },
+    "dependency_groups": [
+      "runtime",
+      "development"
+    ],
+    "version_strategy": "minimum",
+    "registry_config_paths": [],
+    "locked_install": [],
+    "add": [
+      "go",
+      "get"
+    ],
+    "remove": [
+      "go",
+      "mod",
+      "edit",
+      "-droprequire"
+    ],
+    "update": [
+      "go",
+      "get",
+      "-u"
+    ],
+    "audit": [
+      "govulncheck",
+      "-format",
+      "json",
+      "./..."
+    ],
+    "audit_network_policy": "may-access-network",
+    "audit_version_probe": [
+      "govulncheck",
+      "-version"
+    ],
+    "dependency_audit_parser": {
+      "format": "govulncheck-json-stream",
+      "schema_version": "protocol-v1",
+      "max_findings": 500,
+      "limitation": "Parses Go vulnerability IDs, aliases, fixed versions, and trace/module evidence. govulncheck emits a concatenated JSON stream, not one JSON document; the Go vulnerability database reports no severity or licenses."
+    },
+    "audit_allow_missing_lockfiles": true,
+    "manifest_generation": {
+      "renderer": "go-mod",
+      "path": "go.mod",
+      "project_name_field": "module",
+      "go_version_field": "go",
+      "runtime_dependencies_field": "require"
+    },
+    "audit_write_effects": [
+      "package-manager-cache"
+    ],
+    "audit_timeout_seconds": 300,
+    "audit_output_limit": 1048576,
+    "audit_requires_confirmation": true
+  }
+}

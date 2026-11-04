@@ -1,13 +1,13 @@
 {
-  "name": "hybrid-code-review-marketplace",
+  "name": "jak-plugins-marketplace",
   "owner": {
     "name": "SavEe2429"
   },
   "plugins": [
     {
-      "name": "hybrid-code-review",
+      "name": "jak-plugins",
       "source": "./",
-      "description": "Five-pass PR review ending in a simulated technical-defense grilling."
+      "description": "Agent toolkit: project-scaffolder and skill-factory skills."
     }
   ]
 }

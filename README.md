@@ -1,83 +1,62 @@
-# hybrid-code-review
+# jak-plugins
 
-A five-pass read of a PR or diff that ends where normal review stops: the questions a
-senior architect will actually ask, with model answers you can say out loud.
+A skill bundle for **Claude Code**, **OpenAI Codex (GPT)** and **Gemini CLI**.
+One `skills/` folder, thin adapters for each host.
+
+| Skill | What it does |
+|---|---|
+| `project-scaffolder` | Scaffold a new project or audit an existing one, using evidence-selected profiles (web, game, embedded, systems, AI/data, security). |
+| `skill-factory` | Discover, evaluate, select and compose skills, plugins, MCP servers and tools for a task. |
+
+## Layout
 
 ```text
-Phase 1  PR Intent & Delta Triage      what was broken, what shape of fix
-Phase 2  Macro Anchor (file to file)   where the change sits, blast radius
-Phase 3  Dynamic Flow (func to func)   the call chain this PR touches
-Phase 4  Contracts & Invariants        I/O, invariants, edge cases, the "why"
-Phase 5  Technical Defense Simulation  the grilling, with model answers
+skills/<name>/SKILL.md                              single source of truth (Agent Skills format)
+.claude-plugin/                                     Claude Code plugin + marketplace manifests
+AGENTS.md, prompts/*.md                             OpenAI Codex CLI
+gemini-extension.json, GEMINI.md, commands/*.toml   Gemini CLI extension
 ```
 
-Approval review asks "is this correct?". This asks "can I answer any question about it
-in a room full of people who did not write it?".
+Edit the skills, not the adapters.
 
-## Single source of truth
-
-`skills/hybrid-code-review/SKILL.md` holds the whole method. Every other file in this
-repo is a thin host adapter that points at it. Edit the SKILL, not the adapters.
-
-## Install — Claude Code
+## Claude Code
 
 ```bash
-/plugin marketplace add /absolute/path/to/hybrid-code-review-plugin
-/plugin install hybrid-code-review@hybrid-code-review-marketplace
+/plugin marketplace add SavEe2429/jak-plugins
+/plugin install jak-plugins@jak-plugins-marketplace
 ```
 
-The skill then triggers on its own from the description, or on demand via the Skill
-tool. If you previously copied `SKILL.md` into a project's `.claude/skills/`, delete
-that copy — two copies drift.
+Skills trigger automatically from their descriptions.
 
-## Install — Gemini CLI
+## OpenAI Codex CLI (GPT)
+
+Copy the skills into Codex's skills folder:
 
 ```bash
-gemini extensions install /absolute/path/to/hybrid-code-review-plugin
+mkdir -p ~/.codex/skills && cp -r skills/* ~/.codex/skills/
 ```
 
-`GEMINI.md` loads as context; `/hybrid-code-review [target]` runs it explicitly.
-
-## Install — Codex CLI
-
-Codex reads custom prompts from a fixed directory, so the prompt file needs an absolute
-path baked in:
+Optional slash commands `/project-scaffolder` and `/skill-factory` (absolute path baked in):
 
 ```bash
 mkdir -p ~/.codex/prompts
-sed "s|__PLUGIN_DIR__|$(pwd)|" prompts/hybrid-code-review.md \
-  > ~/.codex/prompts/hybrid-code-review.md
+for f in prompts/*.md; do
+  sed "s|__PLUGIN_DIR__|$(pwd)|g" "$f" > ~/.codex/prompts/$(basename "$f")
+done
 ```
 
-Then `/hybrid-code-review <target>` in Codex. For a single repo you can instead append
-`AGENTS.md` to that repo's own `AGENTS.md` and fix the relative path.
+For a single repo you can instead append `AGENTS.md` to that repo's own `AGENTS.md`
+and fix the relative paths.
 
-## Optional — code-review-graph
+## Gemini CLI
 
-Phases 1–3 are structural questions. With the `code-review-graph` MCP server they take
-one call each instead of twenty greps, and you additionally get per-function risk scores
-and test gaps — the last of which feeds Phase 5's sharpest question ("no test covers
-this, so how do you know it works?").
-
-Deliberately **not** bundled in `gemini-extension.json`: the server needs a per-repo
-`cwd` and it reads the whole tree, so installing it silently on every repo is the wrong
-default. The skill detects its absence, offers this config once, and falls back to git
-and grep if you decline:
-
-```jsonc
-// .mcp.json at the repo root
-{
-  "mcpServers": {
-    "code-review-graph": {
-      "type": "stdio",
-      "command": "uvx",
-      "args": ["code-review-graph", "serve"],
-      "cwd": "<absolute path to repo root>"
-    }
-  }
-}
+```bash
+gemini extensions install https://github.com/SavEe2429/jak-plugins
 ```
 
-Restart the session, run the build once, and the fast path turns itself on. Phases 4
-and 5 are unchanged either way — a graph knows that `A` calls `B`, not that unit ids
-must stay unique.
+`GEMINI.md` loads the skill index as context. Slash commands:
+`/project-scaffolder`, `/skill-factory`.
+
+## Requirements
+
+Both skills ship Python helper scripts (`scripts/`). Python 3.10+ is assumed.

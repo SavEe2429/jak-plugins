@@ -1,0 +1,24 @@
+{
+  "id": "toolchain.python-version-file",
+  "kind": "toolchain",
+  "schema_version": 1,
+  "capabilities": ["version-declaration", "runtime-probe"],
+  "matches": [{ "path": ".python-version", "weight": 5 }],
+  "payload": {
+    "runtime": "python",
+    "version_file": ".python-version",
+    "probe": ["python", "--version"],
+    "version_pattern": "(?P<version>\\d+\\.\\d+(?:\\.\\d+)?)",
+    "version_policy": "compatible",
+    "requirement_level": "required",
+    "version_requirement_source": "project-declared",
+    "environment_preparation": [
+      "Install a Python version compatible with .python-version, then re-run the policy audit."
+    ],
+    "generation": {
+      "path": ".python-version",
+      "content_template": "{version}\n",
+      "validation_pattern": "\\d+\\.\\d+(?:\\.\\d+)?"
+    }
+  }
+}

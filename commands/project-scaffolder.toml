@@ -1,0 +1,7 @@
+description = "Scaffold a new project or audit an existing project structure."
+
+prompt = """
+Read the file `skills/project-scaffolder/SKILL.md` inside this extension's directory and follow it.
+
+Task: {{args}}
+"""

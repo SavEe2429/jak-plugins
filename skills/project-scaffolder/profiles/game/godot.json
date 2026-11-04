@@ -1,0 +1,47 @@
+{
+  "domain": "game",
+  "stack": "godot",
+  "name": "Godot 4 Game Engine (GDScript / C#)",
+  "markers": [
+    "project.godot"
+  ],
+  "directories": [
+    "scenes/main",
+    "scenes/ui",
+    "scenes/levels",
+    "scripts/core",
+    "scripts/systems",
+    "scripts/entities",
+    "assets/sprites",
+    "assets/audio/bgm",
+    "assets/audio/sfx",
+    "assets/fonts",
+    "assets/themes",
+    "addons",
+    "tests/gut",
+    "logbook",
+    "Docs"
+  ],
+  "lfs_patterns": [
+    "*.psd",
+    "*.blend",
+    "*.wav",
+    "*.mp3",
+    "*.ogg"
+  ],
+  "entry_points": [
+    {
+      "path": "scripts/core/math_utils.gd",
+      "description": "Baseline game calculation utility",
+      "template": "class_name MathUtils\nextends RefCounted\n\nstatic func clamp_val(val: float, min_val: float, max_val: float) -> float:\n    return clampf(val, min_val, max_val)\n"
+    }
+  ],
+  "smoke_tests": [
+    {
+      "path": "tests/gut/test_math.gd",
+      "description": "GUT smoke test script",
+      "template": "extends GutTest\n\nfunc test_clamp():\n    var res = MathUtils.clamp_val(5.0, 0.0, 10.0)\n    assert_eq(res, 5.0, \"Value within range should not change\")\n"
+    }
+  ],
+  "ci_workflow": "name: {project_name} CI Pipeline\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  hygiene:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - name: Verify Strict LF\n        run: |;\n          if grep -r $'\\r' --exclude-dir=.git .; then\n            echo \"CRLF line endings detected!\"\n            exit 1\n          fi\n"
+}

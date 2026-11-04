@@ -1,0 +1,31 @@
+{
+  "id": "toolchain.dotnet-global-json",
+  "kind": "toolchain",
+  "schema_version": 1,
+  "capabilities": ["version-declaration", "runtime-probe", "version-generation"],
+  "matches": [
+    {
+      "path": "global.json",
+      "contains": "sdk",
+      "weight": 5
+    }
+  ],
+  "payload": {
+    "runtime": ".net-sdk",
+    "version_file": "global.json",
+    "probe": ["dotnet", "--version"],
+    "version_pattern": "(?s)\\\"version\\\"\\s*:\\s*\\\"(?P<version>\\d+\\.\\d+\\.\\d+)\\\"",
+    "detected_pattern": "(?P<version>\\d+\\.\\d+\\.\\d+)",
+    "version_policy": "exact",
+    "requirement_level": "exact-pin",
+    "version_requirement_source": "project-declared",
+    "environment_preparation": [
+      "Install the exact .NET SDK version declared in global.json, then re-run the policy audit."
+    ],
+    "generation": {
+      "path": "global.json",
+      "content_template": "{\n  \"sdk\": {\n    \"version\": \"{version}\",\n    \"rollForward\": \"latestPatch\"\n  }\n}\n",
+      "validation_pattern": "\\d+\\.\\d+\\.\\d+"
+    }
+  }
+}

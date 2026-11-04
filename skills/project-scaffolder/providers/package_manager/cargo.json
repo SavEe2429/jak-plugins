@@ -1,0 +1,116 @@
+{
+  "id": "package-manager.cargo",
+  "kind": "package_manager",
+  "schema_version": 1,
+  "capabilities": [
+    "manifest",
+    "lockfile",
+    "frozen-install",
+    "dependency-audit"
+  ],
+  "matches": [
+    {
+      "path": "Cargo.toml",
+      "contains": "[package]",
+      "weight": 5
+    }
+  ],
+  "payload": {
+    "manager": "cargo",
+    "executable": "cargo",
+    "version_probe": [
+      "cargo",
+      "--version"
+    ],
+    "manifests": [
+      "Cargo.toml"
+    ],
+    "lockfiles": [
+      "Cargo.lock"
+    ],
+    "lockfile_policy": "required",
+    "inventory_parser": {
+      "path": "Cargo.lock",
+      "format": "toml-package-sections",
+      "scope": "resolved-lockfile-packages",
+      "limitation": "Resolved names and versions only; this parser does not classify direct/transitive edges or evaluate security and licenses."
+    },
+    "lock_check": {
+      "command": [
+        "cargo",
+        "metadata",
+        "--format-version",
+        "1",
+        "--locked",
+        "--offline"
+      ],
+      "network_policy": "offline-required",
+      "description": "Resolve machine-readable workspace dependency metadata while forbidding lockfile changes and network access.",
+      "write_effects": [
+        "package-manager-cache"
+      ],
+      "timeout_seconds": 300,
+      "output_limit": 800,
+      "requires_confirmation": true
+    },
+    "dependency_groups": [
+      "runtime",
+      "development",
+      "optional",
+      "platform-specific"
+    ],
+    "version_strategy": "compatible-range",
+    "registry_config_paths": [
+      ".cargo/config.toml"
+    ],
+    "locked_install": [
+      "cargo",
+      "fetch",
+      "--locked"
+    ],
+    "add": [
+      "cargo",
+      "add"
+    ],
+    "remove": [
+      "cargo",
+      "remove"
+    ],
+    "update": [
+      "cargo",
+      "update"
+    ],
+    "audit": [
+      "cargo",
+      "audit",
+      "--json"
+    ],
+    "audit_network_policy": "may-access-network",
+    "audit_version_probe": [
+      "cargo",
+      "audit",
+      "--version"
+    ],
+    "dependency_audit_parser": {
+      "format": "cargo-audit-json",
+      "schema_version": "cargo-audit-report",
+      "max_findings": 500,
+      "limitation": "Parses RustSec advisory records and warnings. Database freshness/source follows cargo-audit configuration; this report does not imply license compliance."
+    },
+    "manifest_generation": {
+      "renderer": "cargo-toml",
+      "path": "Cargo.toml",
+      "project_name_field": "name",
+      "version_field": "version",
+      "edition_field": "edition",
+      "runtime_dependencies_field": "dependencies",
+      "development_dependencies_field": "dev-dependencies"
+    },
+    "audit_write_effects": [
+      "package-manager-cache"
+    ],
+    "audit_timeout_seconds": 300,
+    "audit_output_limit": 1048576,
+    "audit_requires_confirmation": true
+  }
+}

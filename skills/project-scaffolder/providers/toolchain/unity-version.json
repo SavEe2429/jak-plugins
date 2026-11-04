@@ -1,0 +1,20 @@
+{
+  "id": "toolchain.unity-project-version",
+  "kind": "toolchain",
+  "schema_version": 1,
+  "capabilities": ["version-declaration", "engine-detection"],
+  "matches": [{ "path": "ProjectSettings/ProjectVersion.txt", "weight": 5 }],
+  "payload": {
+    "runtime": "unity-editor",
+    "version_file": "ProjectSettings/ProjectVersion.txt",
+    "probe": ["unity", "-version"],
+    "version_pattern": "(?m)^m_EditorVersion:\\s*(?P<version>\\S+)",
+    "detected_pattern": "(?P<version>\\d+\\.\\d+\\.\\d+[A-Za-z0-9.-]*)",
+    "version_policy": "exact",
+    "requirement_level": "exact-pin",
+    "version_requirement_source": "project-declared",
+    "environment_preparation": [
+      "Install the exact Unity Editor version declared in ProjectSettings/ProjectVersion.txt, then re-run the policy audit."
+    ]
+  }
+}

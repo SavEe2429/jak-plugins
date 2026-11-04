@@ -1,0 +1,110 @@
+{
+  "id": "package-manager.uv",
+  "kind": "package_manager",
+  "schema_version": 1,
+  "capabilities": [
+    "manifest",
+    "lockfile",
+    "frozen-install",
+    "dependency-audit"
+  ],
+  "matches": [
+    {
+      "path": "pyproject.toml",
+      "contains": "[tool.uv]",
+      "weight": 5
+    }
+  ],
+  "payload": {
+    "manager": "uv",
+    "executable": "uv",
+    "version_probe": [
+      "uv",
+      "--version"
+    ],
+    "manifests": [
+      "pyproject.toml"
+    ],
+    "lockfiles": [
+      "uv.lock"
+    ],
+    "lockfile_policy": "required",
+    "inventory_parser": {
+      "path": "uv.lock",
+      "format": "toml-package-sections",
+      "scope": "resolved-lockfile-packages",
+      "limitation": "Resolved names and versions only; this parser does not classify direct/transitive edges or evaluate security and licenses."
+    },
+    "lock_check": {
+      "command": [
+        "uv",
+        "lock",
+        "--check"
+      ],
+      "network_policy": "may-access-network",
+      "description": "Resolve project metadata in check mode and fail if uv.lock would change.",
+      "write_effects": [
+        "package-manager-cache"
+      ],
+      "timeout_seconds": 300,
+      "output_limit": 800,
+      "requires_confirmation": true
+    },
+    "dependency_groups": [
+      "runtime",
+      "development",
+      "optional"
+    ],
+    "version_strategy": "compatible-range",
+    "registry_config_paths": [
+      ".pypirc"
+    ],
+    "locked_install": [
+      "uv",
+      "sync",
+      "--frozen"
+    ],
+    "add": [
+      "uv",
+      "add"
+    ],
+    "remove": [
+      "uv",
+      "remove"
+    ],
+    "update": [
+      "uv",
+      "lock",
+      "--upgrade"
+    ],
+    "audit": [
+      "uv",
+      "audit",
+      "--preview-features",
+      "audit,json-output",
+      "--output-format",
+      "json"
+    ],
+    "audit_network_policy": "may-access-network",
+    "dependency_audit_parser": {
+      "format": "uv-audit-preview-json",
+      "schema_version": "preview",
+      "max_findings": 500,
+      "limitation": "Preview JSON schema may change; uv audit reports vulnerabilities and adverse statuses, not license compliance."
+    },
+    "manifest_generation": {
+      "renderer": "uv-toml",
+      "path": "pyproject.toml",
+      "project_name_field": "name",
+      "version_field": "version",
+      "runtime_dependencies_field": "dependencies",
+      "development_dependencies_field": "dev-dependencies"
+    },
+    "audit_write_effects": [
+      "package-manager-cache"
+    ],
+    "audit_timeout_seconds": 300,
+    "audit_output_limit": 1048576,
+    "audit_requires_confirmation": true
+  }
+}
