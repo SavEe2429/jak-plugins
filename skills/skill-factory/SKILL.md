@@ -8,7 +8,7 @@ description: >-
   across software, research, creative, operations, business, and hybrid workflows.
   Does not design or scaffold repository directories, manifests, or project source trees.
 metadata:
-  version: "4.8.11"
+  version: "4.12.1"
 allowed-tools:
   - "Bash(python scripts/*)"
   - Read
@@ -16,6 +16,9 @@ allowed-tools:
   - run_command
   - read_file
   - write_file
+  - search_web
+  - search_marketplace
+  - ask_question
 ---
 
 # Skill Factory
@@ -30,8 +33,8 @@ architecture, or engineering setup.
 ## Three-layer architecture
 
 1. **Universal Capability Layer:** 10 abstract capability facets (Planning, Research, Design, Creation, Validation, Analysis, Orchestration, Security, Delivery, Learning) serving as a domain-agnostic vocabulary without hardcoded tool lists, canonical skill requirements, or fixed lifecycle steps.
-2. **Dynamic Discovery Layer:** Discovers capabilities and tools by inspecting the actual execution environment, installed skills, and `SKILL.md` frontmatter/descriptions. Eliminates hardcoded catalogs and external skill dependencies.
-3. **Adaptive Selection Layer:** Resolves task requirements dynamically through context-aware matching, lexical relevance ranking, explicit permission-declaration review, and negative trigger boundaries. Host/runtime permission enforcement is a separate control and must not be inferred from `allowed-tools` metadata or a static scan. The built-in AST security scanner (`security_scanner.py`) is the local baseline, with external tools like NVIDIA SkillSpector available as optional secondary verification. Development-only evaluations and release checks are maintained outside this installable skill package.
+2. **Dynamic Discovery Layer:** Discovers capabilities and tools by inspecting the actual execution environment, installed skills, `SKILL.md` frontmatter/descriptions, marketplace catalogs, and online skill registries via web search before considering custom skill creation.
+3. **Adaptive Selection & HIL Governance Layer:** Resolves task requirements dynamically through context-aware matching, top-3 external candidate presentation, the 3-repetition synthesis threshold, and mandatory Human-in-the-Loop (HIL) decision gates. Host/runtime permission enforcement is a separate control and must not be inferred from `allowed-tools` metadata or a static scan. The built-in AST security scanner (`security_scanner.py`) is the local baseline, with external tools like NVIDIA SkillSpector available as optional secondary verification. Development-only evaluations and release checks are maintained outside this installable skill package.
 
 ## Scope boundary
 
@@ -63,8 +66,10 @@ destination out of scope.
 ## Operating principles
 
 - [ ] Follow the user's request and the active repository's instructions first.
-- [ ] Discover before recommending: inspect only relevant project evidence and
-      available skills/tools. Separate observed facts from assumptions.
+- [ ] **Web & Ecosystem Discovery First**: Before proposing or synthesizing any new skill, always search online (`search_web` and `search_marketplace`) to find existing skills, plugins, or MCP servers that match the user's request.
+- [ ] **Present Top 3 External Candidates**: When searching online for a matching skill, always list the **top 3 discovered candidates** (name, source/URL, capabilities, and trust evaluation) for the user to compare.
+- [ ] **The 3-Repetition Rule for Custom Synthesis**: Do not create or synthesize a custom skill from scratch unless the workflow has been repeated at least **3 times** ($\ge 3$ repetitions), or the user explicitly rejects the 3 external candidates and commands custom synthesis.
+- [ ] **Strict Human-in-the-Loop (HIL)**: Every stage of discovery, candidate selection, installation, and custom skill synthesis must be **Human-in-the-Loop (HIL)**. Pause and ask for explicit user approval before installing or synthesizing any skill.
 - [ ] Adapt to the project domain, lifecycle stage, deliverable, risk, team,
       platform, and existing conventions. Hybrid projects can use more than one
       domain profile.
@@ -86,6 +91,19 @@ destination out of scope.
 
 ## Adaptive workflow
 
+### 0. AI Semantic Thinking & Intent Normalization (Pre-Script Step)
+
+Before invoking any deterministic Python script (`scaffold_skill.py`), the AI agent MUST perform a **Semantic Thinking Step** to interpret the user's request across any language, slang, or indirect phrasing:
+
+- [ ] **Decompose Core Action Verbs**: Translate what the user wants done into one or more of the 10 Universal Capability Facets (`planning`, `research`, `design`, `creation`, `validation`, `analysis`, `orchestration`, `security`, `delivery`, `learning`).
+- [ ] **Open-Domain Custom Facets**: If the task belongs to a specialized domain that does not fit the 10 standard facets, define a clean custom facet slug (e.g., `bioinformatics`, `audio_synthesis`) and pass it via `--facets <custom_slug>`.
+- [ ] **Extract Negative Boundaries**: Identify anything the user explicitly asked NOT to do (e.g., "do not run tests") and pass it via `--exclude-facets <facet>`.
+- [ ] **Formulate Precision Agent-Skill Search Queries**: Generate English keywords targeting installable Agent Skills (`SKILL.md`, `npx skills add`) and pass them via `--queries "<kw1>,<kw2>"`.
+- [ ] **Invoke Orchestrator with Normalized Signals**:
+  ```bash
+  uv run python .agents/skills/skill-factory/scripts/scaffold_skill.py --task "<raw_task>" --facets "<facet1>,<facet2>" --exclude-facets "<ex_facet>" --queries "<kw1>,<kw2>"
+  ```
+
 ### 1. Establish the task frame
 
 Identify from the request and only the project evidence needed to select AI
@@ -97,7 +115,7 @@ capabilities:
       improve.
 - [ ] Constraints: existing standards, privacy, security, budget, offline needs,
       permissions, and required verification.
-- [ ] Whether this is a one-off task or a reusable workflow.
+- [ ] Whether this is a one-off task or a reusable workflow ($\ge 3$ repetitions).
 
 Use repository instructions, manifests, representative files, and existing
 workflows as evidence. If context is incomplete, proceed with the safest useful
@@ -120,19 +138,23 @@ These are prompts for inspection, not mandatory checklists. Do not infer that a
 repository is software merely because it contains files, or that every project
 needs tests, a linter, Git hooks, an AI runbook, or a changelog.
 
-### 3. Match capabilities and tools
+### 3. Match capabilities and search online for Top 3 candidates (HIL)
 
 Use the ten facets in `references/capability_taxonomy.md` as a shared vocabulary.
 For each candidate, state the task need it addresses and its evidence. Rank by
 fit, not by a universal score or canonical list. Prefer the fewest tools that
 cover the required work without unnecessary overlap.
 
-Check capabilities in this order:
+Check capabilities in this strict order:
 
-1. Skills and integrations already available in this environment.
+1. Skills and integrations already installed in this environment.
 2. The project's existing AI workflow and native tools that are relevant to the
    requested work.
-3. External candidates only when a real gap remains and discovery is available.
+3. **Dual-Track Agent-First Search Algorithm**: When a capability gap exists, do NOT perform generic software library searches. Follow the two-track discovery protocol:
+   - **Track A (Native Agent Skills & Registries - Highest Priority)**: Search specifically for AI Agent Skills packaged in `SKILL.md` format, CLI skill packages (`npx skills add <author>/<name>`), GitHub topics (`agent-skills`, `claude-skills`, `cursor-skills`), and registries (`skillsdirectory.com`, `agentskills.io`). Example: `cathrynlavery/diagram-design`.
+   - **Track B (Model Context Protocol - Secondary Priority)**: Search for verified MCP servers (`mcp server`, `modelcontextprotocol`) that expose structured tools.
+   - **Avoid Category Errors**: Never mistake standalone desktop GUI apps or bare client libraries for installable Agent Skills.
+4. **Present 3 Discovered Options (HIL Gate)**: Present the **top 3 matching skills/tools** found online with their repository/author, package command (e.g. `npx skills add`), capabilities, and trust evaluations, then wait for the user's decision (HIL).
 
 Project directories, architecture, and engineering configuration are outside
 this skill's scope. Do not perform those tasks or invoke another skill for them.
@@ -160,23 +182,28 @@ runtime guarantees. A scanner or SkillSpector is optional and only report it as
 used when it was actually run and available. Missing scanner support means
 unverified, not safe or malicious by default.
 
-### 6. Synthesize or evolve skills only on request / clear need
+### 6. Synthesize or evolve skills only after 3+ repetitions & HIL approval
 
-When the user asks to create/update a skill, or a genuinely repeated workflow
-justifies one, inspect existing skills and deduplicate before authoring. A
-repeated pattern is a signal to evaluate, not an automatic trigger. Use the
-authoring and lifecycle references. Keep the skill portable, self-contained,
-and explicit about positive and negative triggers. Dry-run and scan with tools
-that exist; disclose unavailable checks. Do not claim automatic activation or
-approval.
+Custom skill synthesis from scratch is strictly gated by two conditions:
 
-### 7. Report a useful, contextual result
+1. **Web Search Exhausted**: You must first search the web and present the top 3 existing external candidates to the user.
+2. **The 3-Repetition Rule ($\ge 3$ Times) & HIL Confirmation**: Custom skill creation is only justified when the specific workflow has been repeated at least **3 times** ($\ge 3$ repetitions), or when the user explicitly commands custom synthesis after reviewing the 3 external candidates in a **Human-in-the-Loop (HIL)** step.
 
-Summarize the task profile, evidence, selected capabilities/tools, relevant gaps,
-trust or permission concerns, and verification performed. Omit irrelevant
-capabilities. Provide actionable next steps only when they follow from the task;
-use `- [ ]` checkboxes for actionable checklists. Do not pad the result to fill a
-fixed taxonomy or readiness score.
+Never auto-synthesize a skill without first asking the user for confirmation.
+When approved via HIL, inspect existing skills and deduplicate before authoring.
+Use the authoring and lifecycle references. Keep the skill portable,
+self-contained, and explicit about positive and negative triggers. Dry-run and
+scan with tools that exist; disclose unavailable checks. Do not claim automatic
+activation or approval.
+
+### 7. Report a useful, contextual result (HIL Checkpoint)
+
+Summarize the task profile, evidence, top 3 discovered online candidates,
+repetition count ($\ge 3$ check), trust or permission concerns, and verification
+performed. Always pause for **Human-in-the-Loop (HIL)** confirmation before
+installing an external skill or synthesizing a new custom skill. Use `- [ ]`
+checkboxes for actionable checklists. Do not pad the result to fill a fixed
+taxonomy or readiness score.
 
 ## Local scripts & utilities
 
@@ -189,6 +216,7 @@ Deterministic helper scripts in `scripts/`:
 - `scripts/capability_matcher.py`: Context-aware capability resolution and negative context matching.
 - `scripts/agent_adapter.py`: Multi-agent environment ports & adapters (Gemini, Codex, Claude Code, Cursor, Copilot, Local).
 - `scripts/capability_composer.py`: Capability contract modeling & continuous workflow DAG composition.
+- `scripts/skill_fetcher.py`: Installs a single skill directory (never the whole bundle) pinned to an immutable commit SHA. Each file is verified by recomputing its Git blob SHA-1 and comparing it with GitHub's tree at that commit; files are staged, scanned with `security_scanner.py`, and installed only when the scan is CLEAN (or `--accept-findings`). Repository paths are containment-checked. `--verify <skill>` detects modified/added/deleted files and a rewritten `.provenance.json` by re-checking the pinned upstream, and reports newer upstream commits. Trust root is GitHub TLS plus the recorded repository; it uses the free GitHub API (2 calls per fetch, up to 3 per verify, 60/hour without `GITHUB_TOKEN`). Always get HIL approval before running it without `--dry-run`.
 
 Repository-maintainer evaluations, regression tests, and the release gate are kept outside the installable package; they are development-only assets, not runtime components.
 
@@ -203,3 +231,4 @@ Repository-maintainer evaluations, regression tests, and the release gate are ke
 - Deduplication: [`references/skill_deduplication_framework.md`](references/skill_deduplication_framework.md)
 - Authoring: [`references/skill_authoring_best_practices.md`](references/skill_authoring_best_practices.md)
 - Evaluator rubric: [`references/nvidia_skill_evaluator_rubric.md`](references/nvidia_skill_evaluator_rubric.md)
+- SkillSpector finding classification: [`references/skillspector_audit_classification.md`](references/skillspector_audit_classification.md)

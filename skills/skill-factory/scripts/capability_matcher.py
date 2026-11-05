@@ -75,6 +75,7 @@ UNIVERSAL_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         "description": "System architecture diagrams, data schemas, database modeling, and interface wireframing.",
         "keywords": [
             "diagram",
+            "diagrams",
             "architecture",
             "wireframe",
             "schema",
@@ -86,6 +87,23 @@ UNIVERSAL_CAPABILITIES: Dict[str, Dict[str, Any]] = {
             "mockup",
             "system design",
             "data model",
+            "uml",
+            "sequence diagram",
+            "erd",
+            "mermaid",
+            "excalidraw",
+            "drawio",
+            "blueprint",
+            "draw",
+            "chart",
+            "visual",
+            "\u0e27\u0e32\u0e14",
+            "\u0e41\u0e1c\u0e19\u0e1c\u0e31\u0e07",
+            "\u0e1c\u0e31\u0e07\u0e23\u0e30\u0e1a\u0e1a",
+            "\u0e44\u0e14\u0e2d\u0e30\u0e41\u0e01\u0e23\u0e21",
+            "\u0e2a\u0e16\u0e32\u0e1b\u0e31\u0e15\u0e22\u0e01\u0e23\u0e23\u0e21",
+            "\u0e2d\u0e2d\u0e01\u0e41\u0e1a\u0e1a",
+            "\u0e1e\u0e34\u0e21\u0e1e\u0e4c\u0e40\u0e02\u0e35\u0e22\u0e27",
         ],
         "builtin_tool": "Structured architectural diagrams and layout modeling tools",
     },
@@ -351,6 +369,19 @@ FACET_INTENT_VERBS: Dict[str, List[str]] = {
         "\u0e2a\u0e37\u0e1a\u0e04\u0e49\u0e19",
         "\u0e2b\u0e32\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25",
     ],
+    "design": [
+        "design",
+        "diagram",
+        "draw",
+        "sketch",
+        "wirefram",
+        "map out",
+        "visuali[sz]",
+        "\u0e27\u0e32\u0e14",
+        "\u0e2d\u0e2d\u0e01\u0e41\u0e1a\u0e1a",
+        "\u0e17\u0e33\u0e1c\u0e31\u0e07",
+        "\u0e23\u0e48\u0e32\u0e07\u0e1c\u0e31\u0e07",
+    ],
     "creation": [
         "draft",
         "write",
@@ -481,9 +512,34 @@ class ContextAwareCapabilityResolver:
     and resolves capability requirements with confidence.
     """
 
-    def __init__(self, task_description: str):
+    def __init__(
+        self,
+        task_description: str,
+        explicit_facets: Optional[List[str]] = None,
+        excluded_facets: Optional[List[str]] = None,
+        explicit_intent: Optional[str] = None,
+    ):
         self.raw_task = task_description
         self.task_lower = task_description.lower().strip()
+        self.explicit_facets = [f.strip().lower() for f in (explicit_facets or []) if f.strip()]
+        self.excluded_facets = [f.strip().lower() for f in (excluded_facets or []) if f.strip()]
+        self.explicit_intent = explicit_intent.strip().upper() if explicit_intent else None
+        self.positive_task, self.negative_clauses = self._partition_negation(self.task_lower)
+
+    @staticmethod
+    def _partition_negation(text: str) -> Tuple[str, List[str]]:
+        """Separates negative clauses (e.g. 'do not run tests', 'ไม่ต้องรันเทสต์') from positive task text."""
+        neg_patterns = [
+            r"(?:do not|don't|never|without)\s+([^,.;\n]+)",
+            r"(?:\u0e44\u0e21\u0e48\u0e15\u0e49\u0e2d\u0e07|\u0e2b\u0e49\u0e32\u0e21|\u0e42\u0e14\u0e22\u0e44\u0e21\u0e48\u0e15\u0e49\u0e2d\u0e07)\s*([^,.;\n]+)",
+        ]
+        neg_clauses: List[str] = []
+        pos_text = text
+        for pat in neg_patterns:
+            for m in re.finditer(pat, text, re.IGNORECASE):
+                neg_clauses.append(m.group(1).strip().lower())
+                pos_text = pos_text.replace(m.group(0), " ")
+        return pos_text.strip(), neg_clauses
 
     def classify_context_profile(self) -> Dict[str, Any]:
         """
@@ -491,7 +547,18 @@ class ContextAwareCapabilityResolver:
         Analyzes functional intent, domain noun-verb pairings, multi-domain signals,
         and ambiguity levels without relying on isolated generic keywords like 'create'.
         """
-        task_text = self.task_lower
+        if self.explicit_intent:
+            return {
+                "primary_domain": self.explicit_intent.lower(),
+                "detected_domains": [self.explicit_intent.lower()],
+                "task_type": "ai_semantic_resolved",
+                "intent": self.explicit_intent,
+                "is_software": True,
+                "confidence": "HIGH",
+                "ambiguity_reason": "",
+            }
+
+        task_text = self.positive_task
         detected_domains: Set[str] = set()
 
         # 1. Creative Writing & Literary Arts
@@ -808,6 +875,34 @@ class ContextAwareCapabilityResolver:
         ):
             detected_domains.add("survey_writing")
 
+        # 15. Architecture, Diagramming & Visual Modeling
+        if any(
+            w in task_text
+            for w in [
+                "diagram",
+                "diagrams",
+                "flowchart",
+                "sequence diagram",
+                "architecture diagram",
+                "uml",
+                "erd",
+                "wireframe",
+                "mermaid",
+                "excalidraw",
+                "drawio",
+                "system design",
+                "blueprint",
+                "\u0e27\u0e32\u0e14\u0e41\u0e1c\u0e19\u0e1c\u0e31\u0e07",
+                "\u0e41\u0e1c\u0e19\u0e1c\u0e31\u0e07",
+                "\u0e1c\u0e31\u0e07\u0e23\u0e30\u0e1a\u0e1a",
+                "\u0e44\u0e14\u0e2d\u0e30\u0e41\u0e01\u0e23\u0e21",
+                "\u0e27\u0e32\u0e14 diagram",
+                "\u0e1e\u0e34\u0e21\u0e1e\u0e4c\u0e40\u0e02\u0e35\u0e22\u0e27",
+                "\u0e2a\u0e16\u0e32\u0e1b\u0e31\u0e15\u0e22\u0e01\u0e23\u0e23\u0e21",
+            ]
+        ):
+            detected_domains.add("architecture_design")
+
         # Ambiguity / Insufficient Information Check
         words = re.findall(r"\b\w+\b", task_text)
         has_action_signals = any(
@@ -989,6 +1084,16 @@ class ContextAwareCapabilityResolver:
                 "confidence": "HIGH",
                 "ambiguity_reason": "",
             }
+        if "architecture_design" in detected_domains:
+            return {
+                "primary_domain": "architecture_design",
+                "detected_domains": ["architecture_design"],
+                "task_type": "architecture_diagramming",
+                "intent": "ARCHITECTURE_VISUAL_DESIGN",
+                "is_software": True,
+                "confidence": "HIGH",
+                "ambiguity_reason": "",
+            }
         if "software_development" in detected_domains:
             return {
                 "primary_domain": "software_development",
@@ -1031,13 +1136,14 @@ class ContextAwareCapabilityResolver:
         intent = profile["intent"]
         scored_caps: Dict[str, Dict[str, Any]] = {}
 
-        # 1. Base keyword and pattern matching
+        # 1. Base keyword and pattern matching against positive task text
         for cap_id, cap_info in UNIVERSAL_CAPABILITIES.items():
             score = 0
             matched_kws = []
             for kw in cap_info["keywords"]:
-                pattern = r"\b" + re.escape(kw) + r"\b" if " " not in kw else re.escape(kw)
-                if re.search(pattern, self.task_lower):
+                is_ascii = kw.isascii()
+                pattern = (r"\b" + re.escape(kw) + r"\b") if (is_ascii and " " not in kw) else re.escape(kw)
+                if re.search(pattern, self.positive_task):
                     score += 2 if " " in kw else 1
                     matched_kws.append(kw)
 
@@ -1348,6 +1454,20 @@ class ContextAwareCapabilityResolver:
             scored_caps["delivery"]["classification"] = "RECOMMENDED"
             scored_caps["delivery"]["rationale"] = "Post-incident analysis and report generation"
 
+        elif intent == "ARCHITECTURE_VISUAL_DESIGN":
+            scored_caps["design"]["score"] += 6
+            scored_caps["design"]["classification"] = "REQUIRED"
+            scored_caps["design"]["confidence"] = "HIGH"
+            scored_caps["design"]["rationale"] = (
+                "Architecture diagramming, visual system modeling, and schema layout"
+            )
+
+            scored_caps["creation"]["score"] += 3
+            scored_caps["creation"]["classification"] = "RECOMMENDED"
+            scored_caps["creation"]["rationale"] = (
+                "Generating diagram source artifacts (Mermaid, SVG, HTML, Draw.io)"
+            )
+
         elif intent == "SOFTWARE_DEVELOPMENT":
             scored_caps["creation"]["score"] += 6
             scored_caps["creation"]["classification"] = "REQUIRED"
@@ -1370,7 +1490,7 @@ class ContextAwareCapabilityResolver:
         # 3. Open-domain facet inference from functional intent verbs.
         # Applies when no predefined domain profile claimed the task, so novel domains
         # still receive capabilities derived from what the user wants DONE.
-        inferred_facets = infer_facets_from_intent(self.task_lower)
+        inferred_facets = infer_facets_from_intent(self.positive_task)
         if intent in ("GENERAL_KNOWLEDGE_TASK", "AMBIGUOUS_OR_UNSPECIFIED") and inferred_facets:
             for facet in inferred_facets:
                 entry = scored_caps[facet]
@@ -1387,6 +1507,57 @@ class ContextAwareCapabilityResolver:
             scored_caps["planning"]["rationale"] = (
                 "Scope the task first; no specific action facet could be inferred"
             )
+
+        # 4. Negative clause disqualification (e.g., 'do not run tests' -> disqualify 'validation')
+        if self.negative_clauses:
+            neg_joined = " ".join(self.negative_clauses)
+            for cap_id, cap_info in UNIVERSAL_CAPABILITIES.items():
+                extra_kws = ["test", "tests", "testing", "\u0e40\u0e17\u0e2a\u0e15\u0e4c", "\u0e23\u0e31\u0e19\u0e40\u0e17\u0e2a\u0e15\u0e4c"] if cap_id == "validation" else []
+                for kw in cap_info["keywords"] + extra_kws:
+                    is_ascii = kw.isascii()
+                    pat = (r"\b" + re.escape(kw) + r"\b") if (is_ascii and " " not in kw) else re.escape(kw)
+                    if re.search(pat, neg_joined):
+                        scored_caps[cap_id]["score"] = 0
+                        scored_caps[cap_id]["classification"] = "DISQUALIFIED"
+                        scored_caps[cap_id]["confidence"] = "HIGH"
+                        scored_caps[cap_id]["rationale"] = (
+                            f"Explicitly excluded by negative instruction: '{neg_joined}'"
+                        )
+                        break
+
+        # 5. AI Semantic Thinking Overrides (--facets & --exclude-facets, including open-domain custom facets)
+        for ex_facet in self.excluded_facets:
+            if ex_facet in scored_caps:
+                scored_caps[ex_facet]["score"] = 0
+                scored_caps[ex_facet]["classification"] = "DISQUALIFIED"
+                scored_caps[ex_facet]["confidence"] = "HIGH"
+                scored_caps[ex_facet]["rationale"] = "Explicitly excluded by AI Semantic Thinking step"
+
+        if self.explicit_facets:
+            if intent == "AMBIGUOUS_OR_UNSPECIFIED":
+                intent = "AI_SEMANTIC_RESOLVED"
+                profile["confidence"] = "HIGH"
+            for req_facet in self.explicit_facets:
+                if req_facet in scored_caps:
+                    scored_caps[req_facet]["score"] = max(scored_caps[req_facet]["score"] + 8, 10)
+                    scored_caps[req_facet]["classification"] = "REQUIRED"
+                    scored_caps[req_facet]["confidence"] = "HIGH"
+                    scored_caps[req_facet]["rationale"] = (
+                        "Resolved directly via AI Semantic Thinking (Step 0)"
+                    )
+                else:
+                    # Open-domain custom facet outside the 10 standard ones!
+                    scored_caps[req_facet] = {
+                        "id": req_facet,
+                        "name": f"Custom Domain Facet: {req_facet.replace('_', ' ').title()}",
+                        "score": 10,
+                        "matched_keywords": [req_facet],
+                        "description": f"Open-domain capability dynamically resolved by AI Thinking for '{req_facet}'.",
+                        "builtin_tool": "Dynamic open-domain web & registry search",
+                        "classification": "REQUIRED",
+                        "confidence": "HIGH",
+                        "rationale": "Open-domain facet dynamically defined by AI Semantic Thinking",
+                    }
 
         # General score-based classification for untouched capabilities
         for cap_id, data in scored_caps.items():
@@ -1436,12 +1607,70 @@ class ContextAwareCapabilityResolver:
         }
 
 
-def match_capabilities_for_context(task_description: str) -> List[Dict[str, Any]]:
+def generate_agent_search_queries(
+    required_caps: List[Dict[str, Any]],
+    raw_task: str = "",
+    custom_queries: Optional[List[str]] = None,
+) -> Dict[str, List[str]]:
+    """
+    Generates Dual-Track Agent-First Search Queries for unmet capabilities:
+    - Track A: Native Agent Skills (SKILL.md, npx skills add, GitHub agent-skills)
+    - Track B: Model Context Protocol (MCP servers)
+    """
+    track_a: List[str] = []
+    track_b: List[str] = []
+
+    if custom_queries:
+        for q in custom_queries:
+            q_clean = q.strip()
+            if q_clean:
+                track_a.append(f'"{q_clean}" ("SKILL.md" OR "npx skills add" OR "agent skill") site:github.com')
+                track_b.append(f'"{q_clean}" ("mcp server" OR "modelcontextprotocol") site:github.com')
+
+    facet_search_terms = {
+        "design": ["diagram-design", "architecture diagram", "mermaid", "drawio-skill"],
+        "planning": ["prd", "task-planner", "requirements"],
+        "research": ["deep-research", "literature-review", "web-research"],
+        "creation": ["code-generator", "scaffold", "authoring"],
+        "validation": ["visual-qa", "test-runner", "playwright"],
+        "analysis": ["code-review", "profiler", "data-analysis"],
+        "orchestration": ["workflow-orchestrator", "ci-cd", "subagent"],
+        "security": ["security-audit", "secret-scanner", "vulnerability"],
+        "delivery": ["changelog", "release-notes", "documentation"],
+        "learning": ["post-mortem", "skill-creator", "retrospective"],
+    }
+
+    for cap in required_caps:
+        cid = cap.get("id", "")
+        terms = facet_search_terms.get(cid, [cid.replace("_", " ")])
+        primary_term = terms[0]
+        secondary_term = terms[1] if len(terms) > 1 else primary_term
+        track_a.append(
+            f'"{primary_term}" OR "{secondary_term}" ("SKILL.md" OR "npx skills add" OR "agent skill") site:github.com'
+        )
+        track_b.append(
+            f'"{primary_term}" OR "{secondary_term}" ("mcp server" OR "modelcontextprotocol") site:github.com'
+        )
+
+    return {"track_a_agent_skills": track_a, "track_b_mcp_servers": track_b}
+
+
+def match_capabilities_for_context(
+    task_description: str,
+    explicit_facets: Optional[List[str]] = None,
+    excluded_facets: Optional[List[str]] = None,
+    explicit_intent: Optional[str] = None,
+) -> List[Dict[str, Any]]:
     """
     Returns relevance-sorted matched capabilities for task context.
     Provides uniform access with both 'id' and 'facet' fields.
     """
-    resolver = ContextAwareCapabilityResolver(task_description)
+    resolver = ContextAwareCapabilityResolver(
+        task_description,
+        explicit_facets=explicit_facets,
+        excluded_facets=excluded_facets,
+        explicit_intent=explicit_intent,
+    )
     res = resolver.resolve_capabilities()
     matched: List[Dict[str, Any]] = []
     for c in res["required_capabilities"]:
@@ -1455,9 +1684,19 @@ def match_capabilities_for_context(task_description: str) -> List[Dict[str, Any]
     return matched
 
 
-def analyze_task_capabilities(task_description: str) -> List[Dict[str, Any]]:
+def analyze_task_capabilities(
+    task_description: str,
+    explicit_facets: Optional[List[str]] = None,
+    excluded_facets: Optional[List[str]] = None,
+    explicit_intent: Optional[str] = None,
+) -> List[Dict[str, Any]]:
     """Backwards-compatible API returning relevance-sorted matched capabilities."""
-    return match_capabilities_for_context(task_description)
+    return match_capabilities_for_context(
+        task_description,
+        explicit_facets=explicit_facets,
+        excluded_facets=excluded_facets,
+        explicit_intent=explicit_intent,
+    )
 
 
 def parse_skill_metadata(skill_dir: Path) -> Dict[str, Any]:
@@ -1625,7 +1864,13 @@ def map_installed_skills_to_capabilities(installed_skills_dirs: List[Path]) -> D
 
 
 def main():
-    task = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else ""
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Context-aware capability resolution and intent classifier"
+    )
+    parser.add_argument("task", nargs="*", help="Task description to analyze")
+    task = " ".join(parser.parse_args().task)
     resolver = ContextAwareCapabilityResolver(task)
     res = resolver.resolve_capabilities()
 

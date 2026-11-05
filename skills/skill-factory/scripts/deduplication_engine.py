@@ -186,6 +186,15 @@ def extract_keywords(text: str) -> Set[str]:
     return {w for w in words if w not in STOP_WORDS}
 
 
+def _strip_negative_clause(text: str) -> str:
+    """Removes 'WHEN NOT TO USE:' and negative boundary clauses before entity extraction."""
+    return re.split(
+        r"(?:when not to use|do not use for|not for|excludes|never use for)[:\s]",
+        text,
+        flags=re.IGNORECASE,
+    )[0]
+
+
 def extract_domain_entities(name: str, desc: str = "") -> Set[str]:
     """
     Extracts primary domain entities dynamically from skill name and description
@@ -193,18 +202,19 @@ def extract_domain_entities(name: str, desc: str = "") -> Set[str]:
     Identifies subject nouns (e.g. 'postgres', 'unity', 'git', 'auth', 'docker')
     by parsing slug tokens and filtering out generic action verbs and generic abstract entities.
     """
+    clean_name = _strip_negative_clause(name)
+    clean_desc = _strip_negative_clause(desc)
     entities = set()
-    parts = [p.lower() for p in re.split(r"[-_\s]", name) if p]
+    parts = [p.lower() for p in re.findall(r"[a-zA-Z0-9]{3,}", clean_name)]
     for p in parts:
         if (
-            len(p) >= 3
-            and p not in GENERIC_ACTION_VERBS
+            p not in GENERIC_ACTION_VERBS
             and p not in GENERIC_ABSTRACT_ENTITIES
             and p not in STOP_WORDS
         ):
             entities.add(p)
 
-    desc_tokens = extract_keywords(desc)
+    desc_tokens = extract_keywords(clean_desc)
     for cluster_id, cluster_tokens in COMMON_ENTITY_CLUSTERS.items():
         if desc_tokens.intersection(cluster_tokens):
             entities.add(cluster_id)
@@ -215,18 +225,23 @@ def extract_domain_entities(name: str, desc: str = "") -> Set[str]:
 def extract_entity_cluster(name_or_desc: str) -> Optional[str]:
     """
     Identifies primary domain entity dynamically from text.
-    Checks dynamic domain entity tokens, with fallback to seed domain clusters.
+    Checks dynamic domain entity tokens in deterministic order, prioritizing the skill slug.
     """
-    entities = extract_domain_entities(name_or_desc)
-    if entities:
-        # Prefer known entity cluster if present
-        for ent in entities:
+    clean_text = _strip_negative_clause(name_or_desc)
+    ordered_parts = [
+        p.lower()
+        for p in re.findall(r"[a-zA-Z0-9]{3,}", clean_text)
+        if p.lower() not in GENERIC_ACTION_VERBS
+        and p.lower() not in GENERIC_ABSTRACT_ENTITIES
+        and p.lower() not in STOP_WORDS
+    ]
+    if ordered_parts:
+        for ent in ordered_parts:
             if ent in COMMON_ENTITY_CLUSTERS:
                 return ent
-        # Otherwise return first non-generic subject entity
-        return next(iter(entities))
+        return ordered_parts[0]
 
-    tokens = extract_keywords(name_or_desc)
+    tokens = extract_keywords(clean_text)
     for cluster_id, cluster_tokens in COMMON_ENTITY_CLUSTERS.items():
         if tokens.intersection(cluster_tokens):
             return cluster_id
