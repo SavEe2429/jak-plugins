@@ -69,6 +69,12 @@ Resources; do not split those lists into cards or separate tables. Keep
 cross-cutting Resources traceable across every Workstream they support, using
 the same stable Resource identity where practical.
 
+**Cell formatting rules for maximum readability:**
+- Separate distinct items or statements inside cells with <br>•  instead of semicolons (;) in a single running paragraph.
+- For Capability and Work Rationale cells, explicitly separate Core and Supporting blocks on distinct lines: **Core:** ...<br>**Supporting:** ....
+- For Resource and Recommendation Role, put each distinct Resource on its own bullet line with its exact type or role prefix: • [Primary] ...<br>• [Supporting] ....
+- For status columns (Verification, Evaluation, Coverage / Gap), keep the primary status tag at the start (e.g. **Partially Verified**) followed by <br>•  for concise supporting rationale.
+
 Do not mark work required merely because it is common in the domain. Preserve
 evidence, rationale, and the relationship between work, Capability, and
 Resource.
@@ -109,6 +115,9 @@ The Matrix is the only structured work/resource table. Do not replace it with
 cards, a second overview matrix, or a separate catalog table.
 
 When useful, add concise prose summaries outside the Matrix:
+- A **Quick Decision & Actionable Starting Plan** (Roadmap) upfront, organizing recommended skills into distinct lifecycle phases (e.g. Phase 1: Prototype MVP & Scoping, Phase 2: Daily Production & Micro-Workflows, Phase 3: Release & Operations).
+- **Normalized Resource Notes** grouped by functional categories (e.g. Foundational Coding & Micro-Workflows, Game Prototyping, Engine & Data, UI/Audio/Feel, Build/Release Automation, Optional Plugins) rather than dumped as a single repository list.
+- **Sources** grouped consistently with the functional categories.
 - A brief summary after each Workstream analysis, stating understood work,
   Core/Supporting Capabilities, grounded inferences, unresolved questions,
   and Required/Optional/Deferred exit criteria.
@@ -147,7 +156,7 @@ unavailable, say clearly that the report was displayed but not saved.
 
 Use this default location:
 
-`.agents/skill-factory/project-matrices/<project-slug>/`
+`skill-matrix/<project-slug>/`
 
 Keep an `index.md` for browsing and the latest revision, plus immutable,
 dated snapshot files such as `matrix-YYYYMMDDTHHmmssZ-rNN.md`. Each snapshot

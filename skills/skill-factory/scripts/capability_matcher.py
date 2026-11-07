@@ -1613,19 +1613,27 @@ def generate_agent_search_queries(
     custom_queries: Optional[List[str]] = None,
 ) -> Dict[str, List[str]]:
     """
-    Generates Dual-Track Agent-First Search Queries for unmet capabilities:
-    - Track A: Native Agent Skills (SKILL.md packages, Skills registries, GitHub agent-skills)
-    - Track B: Model Context Protocol (MCP servers)
+    Generates 3-Track Agent-First Search Queries for unmet capabilities:
+    - Track A: Domain & Platform Core Skills
+    - Track B: Supporting Engineering Craft & Micro-Workflows (ponytail, grill-me, handoff, to-spec, to-tickets, diagnosing-bugs)
+    - Track C: Model Context Protocol (MCP servers)
     """
     track_a: List[str] = []
-    track_b: List[str] = []
+    track_b: List[str] = [
+        '"grill-me" OR "grill-with-docs" ("SKILL.md" OR "agent skill") site:github.com',
+        '"ponytail" ("ladder of laziness" OR "SKILL.md" OR "agent skill") site:github.com',
+        '"handoff" OR "claude-handoff" ("SKILL.md" OR "agent skill") site:github.com',
+        '"to-spec" OR "to-tickets" ("SKILL.md" OR "agent skill") site:github.com',
+        '"diagnosing-bugs" OR "debugging-workflow" ("SKILL.md" OR "agent skill") site:github.com',
+    ]
+    track_c: List[str] = []
 
     if custom_queries:
         for q in custom_queries:
             q_clean = q.strip()
             if q_clean:
                 track_a.append(f'"{q_clean}" ("SKILL.md" OR "agent skill" OR "Skills registry") site:github.com')
-                track_b.append(f'"{q_clean}" ("mcp server" OR "modelcontextprotocol") site:github.com')
+                track_c.append(f'"{q_clean}" ("mcp server" OR "modelcontextprotocol") site:github.com')
 
     facet_search_terms = {
         "design": ["diagram-design", "architecture diagram", "mermaid", "drawio-skill"],
@@ -1648,7 +1656,7 @@ def generate_agent_search_queries(
         track_a.append(
             f'"{primary_term}" OR "{secondary_term}" ("SKILL.md" OR "agent skill" OR "Skills registry") site:github.com'
         )
-        track_b.append(
+        track_c.append(
             f'"{primary_term}" OR "{secondary_term}" ("mcp server" OR "modelcontextprotocol") site:github.com'
         )
 
@@ -2145,6 +2153,17 @@ def match_skill_candidates_to_capabilities(
 
             direct_matches = [term for term in primary_terms if term in searchable]
             indirect_matches = [term for term in related_terms if term in searchable]
+
+            # Token-overlap fallback if exact phrase matching did not match
+            token_matches = []
+            if not direct_matches and not indirect_matches:
+                for term in primary_terms:
+                    words = [w for w in re.split(r"[^a-z0-9]+", term.casefold()) if len(w) >= 3 and w not in {"the", "and", "for", "with", "game", "unity"}]
+                    matched_words = [w for w in words if w in searchable]
+                    if len(matched_words) >= 2 or (len(words) == 1 and len(matched_words) == 1):
+                        token_matches.extend(matched_words)
+                token_matches = list(dict.fromkeys(token_matches))
+
             if direct_matches:
                 match_type = "Direct"
                 matched_terms = direct_matches
@@ -2153,6 +2172,10 @@ def match_skill_candidates_to_capabilities(
                 match_type = "Indirect"
                 matched_terms = indirect_matches
                 score = len(indirect_matches) * 2
+            elif token_matches:
+                match_type = "Direct"
+                matched_terms = token_matches
+                score = sum(3 if w in metadata["name"].replace("-", " ").casefold() else 1 for w in token_matches)
             else:
                 continue
 
