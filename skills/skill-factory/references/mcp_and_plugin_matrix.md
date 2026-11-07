@@ -54,4 +54,16 @@ Before recommending any MCP server or plugin, `skill-factory` enforces:
 - [ ] **Native Process Scoping:** Inspect if the MCP server requires raw shell or OS process execution permissions.
 - [ ] **Credential Isolation:** Never expose persistent environment credentials in unencrypted or shared configurations.
 - [ ] **Read vs Write Isolation:** Prefer read-only filesystem or database scopes when tasks only require inspection.
-- [ ] **Audit Trail:** Maintain records of MCP server recommendations and their matching capabilities in `logbook/current.md`.
+- [ ] **Audit Trail:** Maintain records of MCP server recommendations and their matching capabilities in `logbook/current.md` when the project already uses that logbook;
+  otherwise record them in the project matrix snapshot.
+
+---
+
+## 5. Using this matrix with workstreams and lifecycle stages
+
+This table is organized by capability facet only. For project-wide
+recommendations, first resolve workstreams and lifecycle stages using
+`workstream_taxonomy.md` and `project_matrix_schema.md`, then use the facet
+rows here only as vocabulary for the kinds of integrations that may fill a
+gap. Do not copy product names from this table into a matrix cell without
+verifying current availability, source, and permissions.

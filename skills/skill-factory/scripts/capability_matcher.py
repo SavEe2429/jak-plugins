@@ -1614,7 +1614,7 @@ def generate_agent_search_queries(
 ) -> Dict[str, List[str]]:
     """
     Generates Dual-Track Agent-First Search Queries for unmet capabilities:
-    - Track A: Native Agent Skills (SKILL.md, npx skills add, GitHub agent-skills)
+    - Track A: Native Agent Skills (SKILL.md packages, Skills registries, GitHub agent-skills)
     - Track B: Model Context Protocol (MCP servers)
     """
     track_a: List[str] = []
@@ -1624,7 +1624,7 @@ def generate_agent_search_queries(
         for q in custom_queries:
             q_clean = q.strip()
             if q_clean:
-                track_a.append(f'"{q_clean}" ("SKILL.md" OR "npx skills add" OR "agent skill") site:github.com')
+                track_a.append(f'"{q_clean}" ("SKILL.md" OR "agent skill" OR "Skills registry") site:github.com')
                 track_b.append(f'"{q_clean}" ("mcp server" OR "modelcontextprotocol") site:github.com')
 
     facet_search_terms = {
@@ -1646,7 +1646,7 @@ def generate_agent_search_queries(
         primary_term = terms[0]
         secondary_term = terms[1] if len(terms) > 1 else primary_term
         track_a.append(
-            f'"{primary_term}" OR "{secondary_term}" ("SKILL.md" OR "npx skills add" OR "agent skill") site:github.com'
+            f'"{primary_term}" OR "{secondary_term}" ("SKILL.md" OR "agent skill" OR "Skills registry") site:github.com'
         )
         track_b.append(
             f'"{primary_term}" OR "{secondary_term}" ("mcp server" OR "modelcontextprotocol") site:github.com'
@@ -1861,6 +1861,367 @@ def map_installed_skills_to_capabilities(installed_skills_dirs: List[Path]) -> D
         capability_map[cap_id] = [name for name, _ in scored_candidates]
 
     return capability_map
+
+
+def _normalize_capability_terms(values: Any) -> List[str]:
+    """Normalize caller-supplied capability phrases without executing or interpreting them."""
+    if isinstance(values, str):
+        values = [values]
+    if not isinstance(values, (list, tuple, set)):
+        return []
+    normalized = []
+    seen = set()
+    for value in values:
+        if not isinstance(value, str):
+            continue
+        phrase = re.sub(r"\s+", " ", value).strip().casefold()
+        if len(phrase) < 2 or phrase in seen:
+            continue
+        seen.add(phrase)
+        normalized.append(phrase)
+    return normalized
+
+
+def _normalize_capability_source_links(raw_item: Dict[str, Any]) -> List[Dict[str, str]]:
+    """Preserve each work-item-to-level relationship instead of storing parallel lists."""
+    raw_links = raw_item.get("source_links")
+    links: List[Dict[str, str]] = []
+
+    if isinstance(raw_links, list):
+        for raw_link in raw_links:
+            if not isinstance(raw_link, dict):
+                continue
+            work_item_id = str(
+                raw_link.get("work_item_id", raw_link.get("id", "")) or ""
+            ).strip()
+            if not work_item_id:
+                continue
+            link = {
+                "work_item_id": work_item_id,
+                "level": str(raw_link.get("level", raw_item.get("level", "Unknown")) or "Unknown").strip(),
+                "lifecycle_stage": str(raw_link.get("lifecycle_stage", raw_item.get("lifecycle_stage", "Unknown")) or "Unknown").strip(),
+                "importance": str(raw_link.get("importance", raw_item.get("importance", "Unknown")) or "Unknown").strip(),
+                "work_rationale": str(raw_link.get("work_rationale", raw_item.get("work_rationale", "")) or "").strip(),
+            }
+            links.append(link)
+    else:
+        source_items = raw_item.get("source_work_items", [])
+        if isinstance(source_items, list):
+            levels = _normalize_capability_terms(raw_item.get("levels", []))
+            fallback_level = raw_item.get("level") or (levels[0] if len(levels) == 1 else "Unknown")
+            for source_item in source_items:
+                work_item_id = str(source_item).strip()
+                if not work_item_id:
+                    continue
+                links.append({
+                    "work_item_id": work_item_id,
+                    "level": str(fallback_level or "Unknown").strip(),
+                    "lifecycle_stage": str(raw_item.get("lifecycle_stage", "Unknown") or "Unknown").strip(),
+                    "importance": str(raw_item.get("importance", "Unknown") or "Unknown").strip(),
+                    "work_rationale": str(raw_item.get("work_rationale", "") or "").strip(),
+                })
+
+    unique_links: List[Dict[str, str]] = []
+    seen = set()
+    for link in links:
+        identity = tuple(link[field].casefold() for field in (
+            "work_item_id", "level", "lifecycle_stage", "importance", "work_rationale"
+        ))
+        if identity not in seen:
+            seen.add(identity)
+            unique_links.append(link)
+    return unique_links
+
+
+def _merge_capability_source_links(links: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    """Merge exact duplicate lineage records without breaking their field pairing."""
+    merged = []
+    seen = set()
+    for link in links:
+        if not isinstance(link, dict):
+            continue
+        normalized = {
+            field: str(link.get(field, "") if field == "work_rationale" else link.get(field, "Unknown") or "Unknown").strip()
+            for field in ("work_item_id", "level", "lifecycle_stage", "importance", "work_rationale")
+        }
+        if not normalized["work_item_id"]:
+            continue
+        identity = tuple(normalized[field].casefold() for field in normalized)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        merged.append(normalized)
+    return merged
+
+
+def _normalize_capability_rationales(raw_item: Dict[str, Any]) -> List[str]:
+    """Collect all distinct explanations supporting related-term matching."""
+    values = []
+    single = raw_item.get("related_rationale")
+    multiple = raw_item.get("related_rationales", [])
+    if isinstance(single, str) and single.strip():
+        values.append(single.strip())
+    if isinstance(multiple, str):
+        multiple = [multiple]
+    if isinstance(multiple, list):
+        values.extend(value.strip() for value in multiple if isinstance(value, str) and value.strip())
+    result = []
+    seen = set()
+    for value in values:
+        key = re.sub(r"\s+", " ", value).casefold()
+        if key not in seen:
+            seen.add(key)
+            result.append(value)
+    return result
+
+
+def _display_capability_levels(values: List[str]) -> List[str]:
+    """Return stable display labels for the five supported work-analysis levels."""
+    labels = {
+        "project": "Project",
+        "workstream": "Workstream",
+        "sub-workstream": "Sub-workstream",
+        "task": "Task",
+        "activity": "Activity",
+    }
+    return [labels.get(str(value).casefold(), str(value)) for value in values]
+
+
+def match_skill_candidates_to_capabilities(
+    capability_items: List[Dict[str, Any]],
+    installed_skills_dirs: List[Path],
+    min_score: int = 2,
+) -> Dict[str, Any]:
+    """
+    Match installed Skills to specific project Capability records.
+
+    Capability role (Core/Supporting) and source work-item links are supplied
+    by the project-work analysis and are preserved verbatim. They are never
+    inferred from Skill names. Direct matches use the Capability statement and
+    search_terms; related_terms can produce an explicitly Indirect match.
+    This is candidate retrieval, not final trust/security evaluation.
+    """
+    if not isinstance(min_score, int) or min_score < 1:
+        raise ValueError("min_score must be a positive integer")
+
+    parsed_skills = []
+    seen_paths = set()
+    seen_names = set()
+    for skill_dir in installed_skills_dirs:
+        if not isinstance(skill_dir, Path) or not skill_dir.is_dir():
+            continue
+        try:
+            canonical_path = skill_dir.resolve()
+        except OSError:
+            canonical_path = skill_dir.absolute()
+        if canonical_path in seen_paths:
+            continue
+        seen_paths.add(canonical_path)
+        metadata = parse_skill_metadata(skill_dir)
+        identity = str(metadata.get("name") or skill_dir.name).strip().casefold()
+        if not identity or identity in seen_names:
+            continue
+        seen_names.add(identity)
+        parsed_skills.append(metadata)
+
+    scope_exclusions = _declared_skill_scope_exclusions()
+    results: Dict[str, Any] = {
+        "capabilities": [],
+        "unmatched_capability_ids": [],
+        "conflicting_capability_ids": [],
+        "unjustified_supporting_capability_ids": [],
+        "candidate_count": 0,
+    }
+
+    # Consolidate stable Capability identities while preserving paired source
+    # lineage (work item, level, lifecycle stage, importance) and every rationale.
+    merged_by_id: Dict[str, Dict[str, Any]] = {}
+    conflicting_ids = set()
+    conflicting_display_ids: Dict[str, str] = {}
+    unjustified_supporting_ids = set()
+    unjustified_supporting_display_ids: Dict[str, str] = {}
+    list_fields = ("search_terms", "related_terms", "excluded_terms")
+    for raw_item in capability_items:
+        if not isinstance(raw_item, dict):
+            continue
+        capability_id = str(raw_item.get("id", "")).strip()
+        statement = str(raw_item.get("statement", "")).strip()
+        role = str(raw_item.get("role", "")).strip().casefold()
+        identity_key = capability_id.casefold()
+        if not capability_id or not statement or role not in ("core", "supporting"):
+            continue
+        if identity_key in conflicting_ids or identity_key in unjustified_supporting_ids:
+            continue
+
+        incoming_links = _normalize_capability_source_links(raw_item)
+        if role == "supporting" and (
+            not incoming_links or any(not link["work_rationale"] for link in incoming_links)
+        ):
+            unjustified_supporting_ids.add(identity_key)
+            unjustified_supporting_display_ids[identity_key] = capability_id
+            merged_by_id.pop(identity_key, None)
+            continue
+        incoming_sources = [link["work_item_id"] for link in incoming_links]
+        raw_sources = raw_item.get("source_work_items", [])
+        if isinstance(raw_sources, list):
+            incoming_sources.extend(str(value).strip() for value in raw_sources if str(value).strip())
+        incoming_levels = _normalize_capability_terms(
+            [raw_item.get("level", "")] + _normalize_capability_terms(raw_item.get("levels", []))
+        )
+        incoming_levels.extend(
+            link["level"].casefold() for link in incoming_links
+            if link["level"] and link["level"].casefold() != "unknown"
+        )
+        incoming_levels = list(dict.fromkeys(incoming_levels))
+        incoming_rationales = _normalize_capability_rationales(raw_item)
+
+        existing = merged_by_id.get(identity_key)
+        if existing is None:
+            merged = dict(raw_item)
+            for field in list_fields:
+                merged[field] = _normalize_capability_terms(raw_item.get(field, []))
+            merged["source_work_items"] = list(dict.fromkeys(incoming_sources))
+            merged["source_links"] = incoming_links
+            merged["levels"] = incoming_levels
+            merged["related_rationales"] = incoming_rationales
+            merged_by_id[identity_key] = merged
+            continue
+
+        same_statement = re.sub(r"\s+", " ", str(existing.get("statement", "")).strip()).casefold() == re.sub(
+            r"\s+", " ", statement
+        ).casefold()
+        if not same_statement or str(existing.get("role", "")).strip().casefold() != role:
+            conflicting_ids.add(identity_key)
+            conflicting_display_ids[identity_key] = capability_id
+            merged_by_id.pop(identity_key, None)
+            continue
+
+        for field in list_fields:
+            incoming_values = _normalize_capability_terms(raw_item.get(field, []))
+            existing[field] = list(dict.fromkeys(existing.get(field, []) + incoming_values))
+        existing["source_work_items"] = list(dict.fromkeys(
+            existing.get("source_work_items", []) + incoming_sources
+        ))
+        existing["source_links"] = _merge_capability_source_links(
+            existing.get("source_links", []) + incoming_links
+        )
+        existing["levels"] = list(dict.fromkeys(existing.get("levels", []) + incoming_levels))
+        existing["related_rationales"] = list(dict.fromkeys(
+            existing.get("related_rationales", []) + incoming_rationales
+        ))
+
+    results["conflicting_capability_ids"] = sorted(
+        conflicting_display_ids.get(key, key) for key in conflicting_ids
+    )
+    results["unjustified_supporting_capability_ids"] = sorted(
+        unjustified_supporting_display_ids.get(key, key) for key in unjustified_supporting_ids
+    )
+    for item in merged_by_id.values():
+        capability_id = str(item["id"]).strip()
+        statement = str(item["statement"]).strip()
+        role = str(item["role"]).strip().casefold()
+
+        primary_terms = _normalize_capability_terms(
+            [statement] + _normalize_capability_terms(item.get("search_terms", []))
+        )
+        related_terms = _normalize_capability_terms(item.get("related_terms", []))
+        related_rationales = _normalize_capability_rationales(item)
+        related_rationale = "; ".join(related_rationales)
+        negative_terms = _normalize_capability_terms(item.get("excluded_terms", []))
+        source_work_items = item.get("source_work_items", [])
+        if not isinstance(source_work_items, list):
+            source_work_items = []
+        source_links = _merge_capability_source_links(item.get("source_links", []))
+
+        candidates = []
+        for metadata in parsed_skills:
+            skill_name = metadata["name"]
+            if _matches_scope_exclusion(skill_name, scope_exclusions):
+                continue
+            searchable = f"{metadata['name'].replace('-', ' ')} {metadata['positive_text']}".casefold()
+            excluded = metadata["negative_text"].casefold()
+            if any(term in excluded for term in negative_terms + primary_terms):
+                continue
+
+            direct_matches = [term for term in primary_terms if term in searchable]
+            indirect_matches = [term for term in related_terms if term in searchable]
+            if direct_matches:
+                match_type = "Direct"
+                matched_terms = direct_matches
+                score = sum(4 if term in metadata["name"].replace("-", " ").casefold() else 2 for term in direct_matches)
+            elif indirect_matches and related_rationale:
+                match_type = "Indirect"
+                matched_terms = indirect_matches
+                score = len(indirect_matches) * 2
+            else:
+                continue
+
+            if score < min_score:
+                continue
+            match_rationale = (
+                "Direct lexical evidence in Skill name/description: " + ", ".join(matched_terms)
+                if match_type == "Direct"
+                else "Indirect support via related method terms ("
+                + ", ".join(matched_terms)
+                + "): "
+                + related_rationale
+            )
+            candidates.append({
+                "resource_name": skill_name,
+                "resource_type": "Agent Skill",
+                "path": str(metadata["path"]),
+                "match_type": match_type,
+                "match_rationale": match_rationale,
+                "score": score,
+                "matched_terms": matched_terms,
+                "verification": "Partially Verified",
+                "practical_test": "Not Tested",
+                "recommendation_role": "Unassigned",
+                "evaluation_status": "Not Evaluated",
+            })
+
+        candidates.sort(key=lambda candidate: (-candidate["score"], candidate["resource_name"].casefold()))
+        display_levels = _display_capability_levels(item.get("levels", []))
+        capability_result = {
+            "capability_id": capability_id,
+            "capability_statement": statement,
+            "capability_role": "Core" if role == "core" else "Supporting",
+            "level": (
+                display_levels[0] if len(display_levels) == 1
+                else "Multiple" if display_levels
+                else "Unknown"
+            ),
+            "levels": display_levels,
+            "source_work_items": list(source_work_items),
+            "source_links": source_links,
+            "related_rationales": related_rationales,
+            "lifecycle_stage": (
+                source_links[0]["lifecycle_stage"] if len({
+                    link["lifecycle_stage"] for link in source_links
+                }) == 1 and source_links
+                else "Multiple" if source_links
+                else str(item.get("lifecycle_stage", "Unknown"))
+            ),
+            "lifecycle_stages": list(dict.fromkeys(
+                link["lifecycle_stage"] for link in source_links
+                if link["lifecycle_stage"]
+            )),
+            "importance": (
+                source_links[0]["importance"] if len({
+                    link["importance"] for link in source_links
+                }) == 1 and source_links
+                else "Multiple" if source_links
+                else str(item.get("importance", "Unknown"))
+            ),
+            "candidates": candidates,
+            "coverage": "Partially Covered" if candidates else "No Resource Found",
+        }
+        results["capabilities"].append(capability_result)
+        results["candidate_count"] += len(candidates)
+        if not candidates:
+            results["unmatched_capability_ids"].append(capability_id)
+
+    return results
 
 
 def main():

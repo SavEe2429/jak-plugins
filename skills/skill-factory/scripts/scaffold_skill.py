@@ -31,6 +31,7 @@ from capability_matcher import (
     generate_agent_search_queries,
     is_non_software_context,
     map_installed_skills_to_capabilities,
+    match_skill_candidates_to_capabilities,
 )
 from deduplication_engine import check_4gate_deduplication
 from security_scanner import scan_all_installed_skills
@@ -459,6 +460,16 @@ def main():
         help="Explicit administrative override to bypass deduplication gates",
     )
     parser.add_argument("--skills-dir", help="Explicit override for skills directory")
+    parser.add_argument(
+        "--capabilities-file",
+        help="JSON input containing specific Core/Supporting capability records",
+    )
+    parser.add_argument(
+        "--min-capability-match-score",
+        type=int,
+        default=2,
+        help="Minimum lexical evidence score for specific capability matching",
+    )
     parser.add_argument("--json", action="store_true", help="Output machine-readable JSON")
 
     args = parser.parse_args()
@@ -470,12 +481,13 @@ def main():
     )
     skills_roots = adapter.resolve_skills_discovery_roots()
 
-    print("================================================================================")
-    print("       SKILL FACTORY: UNIVERSAL AGENT CAPABILITY LIFECYCLE ORCHESTRATOR         ")
-    print("================================================================================")
-    print(f"Workspace Directory : {workspace_path}")
-    print(f"Primary Skills Root : {skills_roots[0] if skills_roots else 'None'}")
-    print("--------------------------------------------------------------------------------")
+    if not args.json:
+        print("================================================================================")
+        print("       SKILL FACTORY: UNIVERSAL AGENT CAPABILITY LIFECYCLE ORCHESTRATOR         ")
+        print("================================================================================")
+        print(f"Workspace Directory : {workspace_path}")
+        print(f"Primary Skills Root : {skills_roots[0] if skills_roots else 'None'}")
+        print("--------------------------------------------------------------------------------")
 
     # Command: Compose Workflow Pipeline
     if args.compose:
@@ -662,7 +674,8 @@ def main():
 
     # Default / Audit Mode
     task_desc = args.task or "General task; infer its context from the workspace and user request"
-    print(f'\nTask Context: "{task_desc}"')
+    if not args.json:
+        print(f'\nTask Context: "{task_desc}"')
 
     # Infrastructure audit is opt-in. Its current checks are software-oriented
     # and should not be imposed on other domains or on ordinary capability lookup.
@@ -692,6 +705,56 @@ def main():
             for d in r.iterdir():
                 if d.is_dir():
                     installed_skill_dirs.append(d)
+
+    if args.capabilities_file:
+        capability_file = Path(args.capabilities_file).resolve()
+        try:
+            capability_payload = json.loads(capability_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            parser.error(f"Cannot read capability JSON file: {exc}")
+        capability_items = (
+            capability_payload.get("capabilities", [])
+            if isinstance(capability_payload, dict)
+            else capability_payload
+        )
+        if not isinstance(capability_items, list):
+            parser.error("Capability JSON must be an array or an object with a 'capabilities' array")
+        try:
+            capability_result = match_skill_candidates_to_capabilities(
+                capability_items,
+                installed_skill_dirs,
+                min_score=args.min_capability_match_score,
+            )
+        except ValueError as exc:
+            parser.error(str(exc))
+        if args.json:
+            print(json.dumps(capability_result, indent=2, ensure_ascii=False))
+            return
+        print("\nSPECIFIC PROJECT CAPABILITY TO INSTALLED SKILL MATCHES")
+        for capability in capability_result["capabilities"]:
+            print(
+                f"\n[{capability['capability_role']}] {capability['capability_id']} "
+                f"({capability['level']}) - {capability['capability_statement']}"
+            )
+            print(f"  Source work items : {', '.join(str(v) for v in capability['source_work_items']) or 'Unknown'}")
+            print(f"  Levels            : {', '.join(capability.get('levels', [])) or capability['level']}")
+            print(f"  Lifecycle         : {capability['lifecycle_stage']}")
+            print(f"  Importance        : {capability['importance']}")
+            if capability["candidates"]:
+                for candidate in capability["candidates"]:
+                    print(
+                        f"  - {candidate['resource_name']} [{candidate['match_type']}] "
+                        f"score={candidate['score']} | Verification={candidate['verification']} "
+                        f"| Practical Test={candidate['practical_test']}"
+                    )
+                    print(f"      Rationale: {candidate['match_rationale']}")
+            else:
+                print("  - No matching installed Skill (No Resource Found)")
+        print(
+            f"\nCandidate matches: {capability_result['candidate_count']} | "
+            f"Unmatched Capabilities: {len(capability_result['unmatched_capability_ids'])}"
+        )
+        return
 
     cap_to_skills = map_installed_skills_to_capabilities(installed_skill_dirs)
     unmet_caps = []

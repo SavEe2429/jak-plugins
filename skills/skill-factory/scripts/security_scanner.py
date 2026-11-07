@@ -933,29 +933,47 @@ def audit_allowed_tools_declaration(skill_dir: Path) -> Dict[str, Any]:
 
 
 def scan_skill_directory(skill_dir: Path) -> Dict[str, Any]:
-    """Scan supported files and report exclusions and manifest permissions separately."""
+    """Scan all skill content without following symlinks or excluding test/evaluation files."""
+    if skill_dir.is_symlink():
+        finding = {
+            "file": str(skill_dir),
+            "line": 1,
+            "severity": "HIGH",
+            "issue": "Symlinked Skill root rejected; inspection could escape the approved Skills root",
+            "snippet": "[SYMLINK ROOT]",
+        }
+        return {
+            "skill": skill_dir.name,
+            "scanned_files": 0,
+            "excluded_files": [],
+            "excluded_file_count": 0,
+            "coverage_status": "PARTIAL",
+            "uninspected_files": [str(skill_dir)],
+            "permission_declaration": {"status": "NOT INSPECTED", "runtime_enforcement": "NOT VERIFIED"},
+            "findings": [finding],
+            "status": "FAIL",
+            "critical_count": 0,
+            "high_count": 1,
+        }
+
     all_findings = []
     scanned_files = 0
     uninspected_files = []
     excluded_files = []
     ephemeral_dirs = {".venv", "venv", "__pycache__", "node_modules", ".git", ".pytest_cache"}
-    excluded_dirs = {"tests", "evals"}
 
     for f in skill_dir.rglob("*"):
-        if not f.is_file():
-            continue
         try:
             relative = f.relative_to(skill_dir)
         except ValueError:
             relative = Path(f.name)
 
+        if f.is_symlink():
+            uninspected_files.append(str(relative) + " [symlink not followed]")
+            continue
+        if not f.is_file():
+            continue
         if any(part in ephemeral_dirs for part in relative.parts) or f.suffix.lower() in (".pyc", ".pyo"):
-            continue
-        if any(part in excluded_dirs for part in relative.parts):
-            excluded_files.append({"path": str(relative), "reason": "excluded_directory"})
-            continue
-        if f.name.startswith("raw_skillspector"):
-            excluded_files.append({"path": str(relative), "reason": "raw_audit_artifact"})
             continue
 
         if is_scannable_file(f):

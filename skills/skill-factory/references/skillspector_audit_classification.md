@@ -1,18 +1,18 @@
 # SkillSpector Security Findings Classification & Traceability Report
 
-This report separates the current installable package scan from historical source-revision evidence. The current scan must be interpreted together with the exact-fingerprint baseline described below; a baseline does not delete or alter the underlying findings.
+The historical section below documents version 4.8.2 only and is not current security evidence. For the active version, consult the maintainer audit/remediation record at `.agents/skills-dev/audit_history/skill_factory/4.12.5/audit_remediation_plan.md`. Do not infer that the current package is SAFE from any historical zero-finding scan.
 
 > Historical Snapshot (version 4.8.2): `audit_history/skill_factory/4.8.2/raw_skillspector_report.json.gz` and `audit_history/skill_factory/4.8.2/raw_skillspector_report.log` describe the earlier 4.8.2 workspace revision only. They are retained outside the installable skill directory for traceability and are not current security evidence.
 
-## Current Package Scan — Active SKILL.md Version
+## Historical Package Scan — Skill Factory 4.8.2 (Not Current Evidence)
 
-- **Scanner:** NVIDIA SkillSpector v2.12.0, static-only `--no-llm`, run 2026-11-04 UTC; exact timestamps are recorded in the repository-root scan JSON artifacts.
+- **Scanner:** NVIDIA SkillSpector v2.12.0, static-only `--no-llm`, historical scan run 2026-11-04 UTC. This is evidence for version 4.8.2 only.
 - **Scope:** The current `skill-factory` source directory. Repository tests, evaluation fixtures/catalog, release tooling, and historical raw reports are maintained outside this directory; the source scan also includes two non-payload repository metadata files.
 - **Coverage:** 21 source components inventoried; all 21 fully inspected; 100.0% coverage; status `complete_with_caveats`.
 - **Unbaselined result:** 0 findings; score 0/100, LOW, recommendation `SAFE`. (The earlier scanner self-detections `PE3` on the GitHub PAT description phrase and `LP1` on network-sink classification signatures no longer match because signature literals in `scripts/security_scanner.py` are split into fragments and descriptive wording was reworded. This changes how SkillSpector's pattern matching sees the file, not what the scanner detects: the composed signatures and AST sink tracking are unchanged and are locked by maintainer regression tests. It is not evidence that the scanner lacks the capability the `LP1` rule describes.)
 - **Baseline result:** 0 active findings; score 0/100, LOW, recommendation `SAFE`; 0 suppressed findings.
 - **Baseline file:** repository-root `skillspector-skill-factory-baseline.json`. It contains empty fingerprints (`fingerprints: []`), establishing a zero-exception baseline policy.
-- **Important interpretation:** The unbaselined raw scan now passes with zero static findings and zero exceptions, eliminating dependency on suppression baselines.
+- **Historical interpretation:** The zero-finding result applied to version 4.8.2 only. It must not be used as current evidence for later Skill Factory versions.
 
 ### Manual source review of the former baseline entry
 
@@ -29,7 +29,7 @@ This report separates the current installable package scan from historical sourc
 - SkillSpector is static analysis, not a sandbox or proof of host/runtime permission enforcement.
 - Any separate manual or AI-assisted source review is recorded in the repository audit history with its scope; it is not reproduced by this scan and is not evidence of the same kind as the scan result.
 
-## Release-gate interpretation
+## Historical release-gate interpretation — 4.8.2
 
 - Local regression suite: 116/116 tests pass.
 - Evaluation harness: 15/15 cases and 75/75 expectations pass.
