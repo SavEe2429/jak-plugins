@@ -1,0 +1,53 @@
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: detect-private-key
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: check-json
+      - id: check-yaml
+      - id: check-toml
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+      - id: trailing-whitespace
+        args: ["--markdown-linebreak-ext=md"]
+      - id: end-of-file-fixer
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.5.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args:
+          - feat
+          - fix
+          - docs
+          - style
+          - refactor
+          - perf
+          - test
+          - build
+          - ci
+          - chore
+          - revert
+
+  - repo: local
+    hooks:
+      - id: check-plugin-manifests
+        name: Verify plugin manifest versions match
+        entry: python -B .github/scripts/release/release_ops.py check-manifests
+        language: system
+        pass_filenames: false
+        files: ^(plugin\.json|gemini-extension\.json|\.claude-plugin/plugin\.json)$
+
+      - id: python-compile-check
+        name: Compile-check Python scripts
+        entry: python -B -m py_compile
+        language: system
+        types: [python]
