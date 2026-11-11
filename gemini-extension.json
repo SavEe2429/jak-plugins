@@ -1,6 +1,6 @@
 {
   "name": "jak-plugins",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Agent toolkit: project-scaffolder and skill-factory skills.",
   "contextFileName": "GEMINI.md"
 }
