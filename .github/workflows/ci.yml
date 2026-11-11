@@ -35,16 +35,17 @@ jobs:
       - name: Compile-Check Python Scripts
         run: |
           python3 -B -c "
-          import pathlib, py_compile
+          import pathlib, py_compile, tempfile
           scripts = sorted(list(pathlib.Path('skills').rglob('*.py')) + list(pathlib.Path('.github').rglob('*.py')))
-          for path in scripts:
-              py_compile.compile(str(path), doraise=True)
+          with tempfile.TemporaryDirectory() as tmp:
+              for idx, path in enumerate(scripts):
+                  py_compile.compile(str(path), cfile=f'{tmp}/{idx}.pyc', doraise=True)
           print(f'Compiled {len(scripts)} Python files cleanly.')
           "
 
       - name: Verify Strict LF Line Endings
         run: |
-          if grep -rn $'\r' --exclude-dir=.git .; then
+          if grep -rnI $'\r' --exclude-dir=.git --exclude-dir=__pycache__ .; then
             echo "ERROR: CRLF line endings detected! Convert files to LF."
             exit 1
           fi

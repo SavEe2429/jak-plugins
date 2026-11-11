@@ -45,7 +45,7 @@ jobs:
       - name: Verify Quality Gate
         run: |
           python3 -B skills/project-scaffolder/scripts/scaffold.py --help >/dev/null
-          if grep -rn $'\r' --exclude-dir=.git .; then
+          if grep -rnI $'\r' --exclude-dir=.git --exclude-dir=__pycache__ .; then
             echo "ERROR: CRLF line endings detected!"
             exit 1
           fi
