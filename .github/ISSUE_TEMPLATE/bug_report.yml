@@ -1,0 +1,104 @@
+name: Bug Report
+description: Report a bug in a skill, prompt/command adapter, helper script, or plugin manifest.
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue in **jak-plugins**. Please provide clear details so we can reproduce and fix it promptly.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Skill or Adapter
+      description: Which part of jak-plugins is experiencing the issue?
+      options:
+        - "skills/project-scaffolder"
+        - "skills/skill-factory"
+        - "Claude Code (.claude-plugin/)"
+        - "Antigravity (plugin.json)"
+        - "Gemini CLI (gemini-extension.json / commands/)"
+        - "OpenAI Codex CLI (AGENTS.md / prompts/)"
+        - "Other / Documentation"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: host_client
+    attributes:
+      label: Host AI Client
+      description: Which AI client were you using when the bug occurred?
+      options:
+        - "Claude Code"
+        - "Antigravity (Gemini)"
+        - "Gemini CLI"
+        - "OpenAI Codex CLI"
+        - "Standalone Python CLI"
+        - "Other"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Plugin / Skill Version
+      description: Version from plugin.json or the affected SKILL.md (e.g. 1.0.0 / 3.15.0)
+      placeholder: "e.g. 1.0.0 (skill 3.15.0)"
+    validations:
+      required: true
+
+  - type: input
+    id: os_python
+    attributes:
+      label: OS & Python Version
+      description: Operating system and Python version running skill scripts
+      placeholder: "e.g. Windows 11, Python 3.14 / Ubuntu 24.04, Python 3.12"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: Clear and concise summary of what went wrong.
+      placeholder: Describe the unexpected behavior...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Exact prompt, slash command, or script invocation used to trigger the bug.
+      value: |
+        1. Installed or invoked via ...
+        2. Ran prompt or command '...'
+        3. Observed error or unexpected output
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_vs_actual
+    attributes:
+      label: Expected vs. Actual Behavior
+      description: What did you expect to happen, and what actually happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: CLI Output / Logs
+      description: Paste relevant script output or error messages (auto-formatted as shell output).
+      render: shell
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Pre-submission Verification
+      options:
+        - label: I have checked existing issues to confirm this is not a duplicate.
+          required: true
+        - label: I removed any local paths containing sensitive credentials or tokens before pasting logs.
+          required: true

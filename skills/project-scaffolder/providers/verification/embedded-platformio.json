@@ -1,0 +1,91 @@
+{
+  "id": "verification.profile.embedded.platformio",
+  "kind": "verification",
+  "schema_version": 1,
+  "capabilities": [
+    "verification-checks",
+    "project-readiness-policy"
+  ],
+  "payload": {
+    "checks": [
+      {
+        "id": "test-1",
+        "kind": "test",
+        "command": [
+          "pio",
+          "test",
+          "-e",
+          "native"
+        ],
+        "required": true,
+        "expected_evidence": {
+          "requires_assertions": true
+        },
+        "execution_policy": {
+          "mode": "exact-argv",
+          "allowed_argv": [
+            "pio",
+            "test",
+            "-e",
+            "native"
+          ],
+          "cwd_scope": "project-root",
+          "network_policy": "may-access-network",
+          "write_effects": [
+            "project-workspace"
+          ],
+          "timeout_seconds": 180,
+          "output_limit": 800,
+          "requires_confirmation": true
+        }
+      },
+      {
+        "id": "build-1",
+        "kind": "build",
+        "command": [
+          "pio",
+          "run"
+        ],
+        "required": true,
+        "expected_evidence": {},
+        "execution_policy": {
+          "mode": "exact-argv",
+          "allowed_argv": [
+            "pio",
+            "run"
+          ],
+          "cwd_scope": "project-root",
+          "network_policy": "may-access-network",
+          "write_effects": [
+            "project-workspace"
+          ],
+          "timeout_seconds": 240,
+          "output_limit": 800,
+          "requires_confirmation": true
+        }
+      }
+    ],
+    "project_policy": {
+      "config_manifests": [
+        "platformio.ini"
+      ],
+      "module_boundary_patterns": [
+        "lib/*"
+      ],
+      "mandatory_categories": [
+        1,
+        2,
+        4,
+        5,
+        7,
+        11,
+        13,
+        18,
+        19
+      ],
+      "na_categories": [
+        3
+      ]
+    }
+  }
+}

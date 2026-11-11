@@ -1,0 +1,17 @@
+{
+  "name": "jak-plugins",
+  "description": "Agent toolkit: project-scaffolder (scaffold/audit projects) and skill-factory (select and compose skills, plugins and tools).",
+  "version": "1.0.0",
+  "author": {
+    "name": "SavEe2429"
+  },
+  "repository": "https://github.com/SavEe2429/jak-plugins",
+  "keywords": [
+    "scaffolding",
+    "project-setup",
+    "skills",
+    "plugins",
+    "mcp",
+    "tooling"
+  ]
+}

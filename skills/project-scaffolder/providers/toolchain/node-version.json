@@ -1,0 +1,18 @@
+{
+  "id": "toolchain.node-version-file",
+  "kind": "toolchain",
+  "schema_version": 1,
+  "capabilities": ["version-declaration", "runtime-probe"],
+  "matches": [{ "path": ".nvmrc", "weight": 5 }],
+  "payload": {
+    "runtime": "node",
+    "version_file": ".nvmrc",
+    "probe": ["node", "--version"],
+    "version_pattern": "(?P<version>\\d+\\.\\d+(?:\\.\\d+)?)",
+    "version_policy": "exact",
+    "requirement_level": "exact-pin",
+    "version_requirement_source": "project-declared",
+    "environment_preparation": ["Install the exact Node.js version declared in .nvmrc, then re-run the policy audit."],
+    "generation": { "path": ".nvmrc", "content_template": "{version}\n", "validation_pattern": "v?\\d+\\.\\d+\\.\\d+" }
+  }
+}

@@ -1,0 +1,7 @@
+description = "Select and compose the right skills, plugins and tools for a task."
+
+prompt = """
+Read the file `skills/skill-factory/SKILL.md` inside this extension's directory and follow it.
+
+Task: {{args}}
+"""

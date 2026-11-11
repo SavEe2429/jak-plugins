@@ -1,0 +1,39 @@
+{
+  "domain": "embedded",
+  "stack": "esp_idf",
+  "name": "Espressif IoT Development Framework (ESP-IDF)",
+  "markers": [
+    "sdkconfig",
+    "main/CMakeLists.txt"
+  ],
+  "directories": [
+    "main",
+    "components/drivers",
+    "components/protocols",
+    "components/hal",
+    "include",
+    "test/main",
+    "partitions",
+    "logbook",
+    "Docs"
+  ],
+  "lfs_patterns": [
+    "*.bin",
+    "*.elf"
+  ],
+  "entry_points": [
+    {
+      "path": "main/main.c",
+      "description": "ESP-IDF app_main baseline",
+      "template": "#include <stdio.h>\n\nvoid app_main(void)\n{\n    printf(\"Initializing {project_name}...\\n\");\n}\n"
+    }
+  ],
+  "smoke_tests": [
+    {
+      "path": "test/main/test_smoke.c",
+      "description": "Unity embedded test fixture",
+      "template": "#include <unity.h>\n\nvoid test_baseline(void)\n{\n    TEST_ASSERT_EQUAL(1, 1);\n}\n"
+    }
+  ],
+  "ci_workflow": "name: {project_name} CI Pipeline\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - name: Verify Strict LF\n        run: |;\n          if grep -r $'\\r' --exclude-dir=.git .; then\n            echo \"CRLF line endings detected!\"\n            exit 1\n          fi\n"
+}

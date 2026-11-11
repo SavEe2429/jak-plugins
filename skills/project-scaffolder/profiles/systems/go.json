@@ -1,0 +1,35 @@
+{
+  "domain": "systems",
+  "stack": "go",
+  "name": "Go CLI / Systems Service",
+  "markers": [
+    "go.mod"
+  ],
+  "directories": [
+    "cmd",
+    "internal/app",
+    "internal/config",
+    "internal/domain",
+    "pkg/client",
+    "tests/integration",
+    "scripts",
+    "logbook",
+    "Docs"
+  ],
+  "lfs_patterns": [],
+  "entry_points": [
+    {
+      "path": "pkg/calc/calc.go",
+      "description": "Foundational package calculation utility",
+      "template": "package calc\n\n// Add returns the integer sum of two numbers\nfunc Add(a int, b int) int {\n\treturn a + b\n}\n"
+    }
+  ],
+  "smoke_tests": [
+    {
+      "path": "pkg/calc/calc_test.go",
+      "description": "Go unit smoke test",
+      "template": "package calc\n\nimport \"testing\"\n\nfunc TestAdd(t *testing.T) {\n\tif Add(2, 3) != 5 {\n\t\tt.Errorf(\"Expected 5, got %d\", Add(2, 3))\n\t}\n}\n"
+    }
+  ],
+  "ci_workflow": "name: {project_name} CI Pipeline\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  code-quality:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - uses: actions/setup-go@v5\n        with:\n          go-version-file: 'go.mod'\n      - run: go vet ./...\n\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - uses: actions/setup-go@v5\n        with:\n          go-version-file: 'go.mod'\n      - run: go test -v ./...\n      - run: go build -v ./...\n\n  summary:\n    needs: [code-quality, test]\n    if: always()\n    runs-on: ubuntu-latest\n    steps:\n      - name: Write Workflow Summary\n        run: |\n          echo \"### CI Quality Gate Summary\" >> $GITHUB_STEP_SUMMARY\n          echo \"| Job | Result |\" >> $GITHUB_STEP_SUMMARY\n          echo \"| :--- | :--- |\" >> $GITHUB_STEP_SUMMARY\n          echo \"| code-quality | ${{ needs.code-quality.result }} |\" >> $GITHUB_STEP_SUMMARY\n          echo \"| test | ${{ needs.test.result }} |\" >> $GITHUB_STEP_SUMMARY\n      - name: Enforce Overall Gate\n        run: |\n          if [[ \"${{ needs.code-quality.result }}\" != \"success\" || \"${{ needs.test.result }}\" != \"success\" ]]; then\n            echo \"One or more CI jobs failed.\"\n            exit 1\n          fi\n"
+}

@@ -1,0 +1,13 @@
+{
+  "name": "jak-plugins-marketplace",
+  "owner": {
+    "name": "SavEe2429"
+  },
+  "plugins": [
+    {
+      "name": "jak-plugins",
+      "source": "./",
+      "description": "Agent toolkit: project-scaffolder and skill-factory skills."
+    }
+  ]
+}

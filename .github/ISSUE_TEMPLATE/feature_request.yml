@@ -1,0 +1,46 @@
+name: Feature Request
+description: Propose a new skill, stack profile, host adapter, or workflow improvement.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea to improve **jak-plugins**? Fill out the form below to propose a new capability or adapter.
+
+  - type: dropdown
+    id: proposal_type
+    attributes:
+      label: Proposal Category
+      options:
+        - "New Skill"
+        - "Enhance Existing Skill (project-scaffolder / skill-factory)"
+        - "New Stack Profile or Provider"
+        - "Host Adapter (Claude / Codex / Gemini / Antigravity)"
+        - "CI / Release / Governance"
+        - "Documentation"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement / Motivation
+      description: What workflow gap or friction does this proposal solve?
+      placeholder: As a user of jak-plugins, I want ... so that ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the skill behavior, manifest changes, or CLI flags you envision.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any workarounds or alternative designs you have considered.

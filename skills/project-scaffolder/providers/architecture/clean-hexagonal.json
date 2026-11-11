@@ -1,0 +1,17 @@
+{
+  "id": "architecture.clean-hexagonal",
+  "kind": "architecture",
+  "schema_version": 1,
+  "capabilities": ["directory-layout", "dependency-direction", "ports-adapters"],
+  "payload": {
+    "description": "A domain-centered layout with explicit application ports and external adapters.",
+    "directories": [
+      { "path": "src/domain", "reason": "domain policy" },
+      { "path": "src/application", "reason": "use cases and ports" },
+      { "path": "src/adapters", "reason": "external adapters" }
+    ],
+    "constraints": ["Domain code must not depend on adapters.", "Adapters implement application ports."],
+    "tradeoffs": ["Supports replaceable external systems.", "Requires explicit boundaries and mapping code."],
+    "supported_template_capabilities": ["clean-hexagonal-layout"]
+  }
+}

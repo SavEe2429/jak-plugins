@@ -1,0 +1,129 @@
+{
+  "domain": "web",
+  "stack": "fastapi",
+  "name": "FastAPI Python Backend / Microservice",
+  "markers": [
+    "pyproject.toml:fastapi",
+    "requirements.txt:fastapi",
+    "main.py",
+    "app/main.py"
+  ],
+  "directories": [
+    "src/api/v1/routes",
+    "src/core/config",
+    "src/models/domain",
+    "src/models/schemas",
+    "src/services",
+    "src/repositories",
+    "tests/unit",
+    "tests/integration",
+    "logbook",
+    "Docs"
+  ],
+  "architecture_layouts": {
+    "small_service": [
+      "src",
+      "tests"
+    ],
+    "layered": [
+      "src/api",
+      "src/services",
+      "src/repositories",
+      "tests/unit",
+      "tests/integration"
+    ],
+    "clean_hexagonal": [
+      "src/domain",
+      "src/application",
+      "src/infrastructure",
+      "src/presentation",
+      "tests/unit",
+      "tests/integration"
+    ],
+    "modular_monolith": [
+      "src/modules",
+      "tests/unit",
+      "tests/integration"
+    ]
+  },
+  "architecture_common_directories": [
+    "Docs",
+    "logbook"
+  ],
+  "architecture_entry_points": {
+    "small_service": [
+      {
+        "path": "src/core/math.py",
+        "description": "Small-service pure utility",
+        "template": "def add(a: int, b: int) -> int:\n    return a + b\n"
+      }
+    ],
+    "layered": [
+      {
+        "path": "src/services/math.py",
+        "description": "Layered service function",
+        "template": "def add(a: int, b: int) -> int:\n    return a + b\n"
+      }
+    ],
+    "clean_hexagonal": [
+      {
+        "path": "src/domain/math.py",
+        "description": "Framework-independent domain function",
+        "template": "def add(a: int, b: int) -> int:\n    return a + b\n"
+      }
+    ],
+    "modular_monolith": [
+      {
+        "path": "src/modules/core/math.py",
+        "description": "Core module function",
+        "template": "def add(a: int, b: int) -> int:\n    return a + b\n"
+      }
+    ]
+  },
+  "architecture_smoke_tests": {
+    "small_service": [
+      {
+        "path": "tests/test_smoke.py",
+        "description": "Small-service smoke test",
+        "template": "from src.core.math import add\n\ndef test_add():\n    assert add(2, 3) == 5\n"
+      }
+    ],
+    "layered": [
+      {
+        "path": "tests/unit/test_math.py",
+        "description": "Layered service test",
+        "template": "from src.services.math import add\n\ndef test_add():\n    assert add(2, 3) == 5\n"
+      }
+    ],
+    "clean_hexagonal": [
+      {
+        "path": "tests/unit/test_domain_math.py",
+        "description": "Domain logic test",
+        "template": "from src.domain.math import add\n\ndef test_add():\n    assert add(2, 3) == 5\n"
+      }
+    ],
+    "modular_monolith": [
+      {
+        "path": "tests/unit/test_core_module.py",
+        "description": "Core module test",
+        "template": "from src.modules.core.math import add\n\ndef test_add():\n    assert add(2, 3) == 5\n"
+      }
+    ]
+  },
+  "lfs_patterns": [],
+  "entry_points": [
+    {
+      "path": "src/core/math.py",
+      "description": "Baseline calculation utility",
+      "template": "\"\"\"Foundational core utilities for {project_name}.\"\"\"\n\ndef add(a: int, b: int) -> int:\n    \"\"\"Pure baseline calculation for smoke testing.\"\"\"\n    return a + b\n"
+    }
+  ],
+  "smoke_tests": [
+    {
+      "path": "tests/test_smoke.py",
+      "description": "Pytest smoke test fixture",
+      "template": "\"\"\"Smoke test fixture for {project_name}.\"\"\"\nfrom src.core.math import add\n\ndef test_smoke_add():\n    assert add(2, 3) == 5\n"
+    }
+  ],
+  "ci_workflow": "name: {project_name} CI Pipeline\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  code-quality:\n    name: Code Quality & Lint\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - name: Install uv and Python\n        uses: astral-sh/setup-uv@v10\n        with:\n          python-version-file: \"pyproject.toml\"\n          enable-cache: true\n      - name: Run Ruff Lint & Format Check\n        run: |\n          uv run ruff check .\n          uv run ruff format --check .\n\n  test:\n    name: Automated Tests\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - name: Install uv and Python\n        uses: astral-sh/setup-uv@v10\n        with:\n          python-version-file: \"pyproject.toml\"\n          enable-cache: true\n      - name: Run Pytest Suite\n        run: uv run pytest tests\n\n  summary:\n    name: CI Summary & Gate\n    needs: [code-quality, test]\n    if: always()\n    runs-on: ubuntu-latest\n    steps:\n      - name: Write Workflow Summary\n        run: |\n          echo \"### CI Quality Gate Summary\" >> $GITHUB_STEP_SUMMARY\n          echo \"| Job | Result |\" >> $GITHUB_STEP_SUMMARY\n          echo \"| :--- | :--- |\" >> $GITHUB_STEP_SUMMARY\n          echo \"| code-quality | ${{ needs.code-quality.result }} |\" >> $GITHUB_STEP_SUMMARY\n          echo \"| test | ${{ needs.test.result }} |\" >> $GITHUB_STEP_SUMMARY\n      - name: Enforce Overall Gate\n        run: |\n          if [[ \"${{ needs.code-quality.result }}\" != \"success\" || \"${{ needs.test.result }}\" != \"success\" ]]; then\n            echo \"One or more CI jobs failed.\"\n            exit 1\n          fi\n"
+}

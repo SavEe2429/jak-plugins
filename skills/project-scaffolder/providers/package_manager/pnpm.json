@@ -1,0 +1,113 @@
+{
+  "id": "package-manager.pnpm",
+  "kind": "package_manager",
+  "schema_version": 1,
+  "capabilities": [
+    "manifest",
+    "lockfile",
+    "frozen-install",
+    "dependency-audit"
+  ],
+  "matches": [
+    {
+      "path": "package.json",
+      "contains": "\"packageManager\": \"pnpm@",
+      "weight": 5
+    }
+  ],
+  "payload": {
+    "manager": "pnpm",
+    "executable": "pnpm",
+    "version_probe": [
+      "pnpm",
+      "--version"
+    ],
+    "manifests": [
+      "package.json"
+    ],
+    "lockfiles": [
+      "pnpm-lock.yaml"
+    ],
+    "lockfile_policy": "required",
+    "inventory_parser": {
+      "path": "pnpm-lock.yaml",
+      "format": "pnpm-lock-v9-yaml",
+      "scope": "resolved-lockfile-packages",
+      "limitation": "Supports pnpm lockfile v9 package/snapshot keys; package names and versions only, without direct/transitive classification."
+    },
+    "lock_check": {
+      "command": [
+        "pnpm",
+        "install",
+        "--lockfile-only",
+        "--frozen-lockfile",
+        "--offline",
+        "--ignore-scripts"
+      ],
+      "network_policy": "offline-required",
+      "description": "Validate the lockfile against the manifest from the local store without running lifecycle scripts or writing node_modules.",
+      "write_effects": [
+        "package-manager-cache"
+      ],
+      "timeout_seconds": 300,
+      "output_limit": 800,
+      "requires_confirmation": true
+    },
+    "manifest_generation": {
+      "path": "package.json",
+      "project_name_field": "name",
+      "version_field": "version",
+      "runtime_dependencies_field": "dependencies",
+      "development_dependencies_field": "devDependencies",
+      "static_fields": {
+        "private": true
+      }
+    },
+    "dependency_groups": [
+      "runtime",
+      "development",
+      "optional",
+      "peer",
+      "platform-specific"
+    ],
+    "version_strategy": "compatible-range",
+    "registry_config_paths": [
+      ".npmrc"
+    ],
+    "locked_install": [
+      "pnpm",
+      "install",
+      "--frozen-lockfile"
+    ],
+    "add": [
+      "pnpm",
+      "add"
+    ],
+    "remove": [
+      "pnpm",
+      "remove"
+    ],
+    "update": [
+      "pnpm",
+      "update"
+    ],
+    "audit": [
+      "pnpm",
+      "audit",
+      "--json"
+    ],
+    "audit_network_policy": "may-access-network",
+    "dependency_audit_parser": {
+      "format": "pnpm-audit-json",
+      "schema_version": "pnpm-audit-report",
+      "max_findings": 500,
+      "limitation": "Parses pnpm advisory records and severity from the selected registry's audit response. Advisory coverage depends on that registry; pnpm audit JSON does not supply license compliance."
+    },
+    "audit_write_effects": [
+      "package-manager-cache"
+    ],
+    "audit_timeout_seconds": 300,
+    "audit_output_limit": 1048576,
+    "audit_requires_confirmation": true
+  }
+}

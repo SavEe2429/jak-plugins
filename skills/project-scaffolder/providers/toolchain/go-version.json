@@ -1,0 +1,20 @@
+{
+  "id": "toolchain.go-version-directive",
+  "kind": "toolchain",
+  "schema_version": 1,
+  "capabilities": ["version-declaration", "runtime-probe"],
+  "matches": [{ "path": "go.mod", "contains": "go ", "weight": 5 }],
+  "payload": {
+    "runtime": "go",
+    "version_file": "go.mod",
+    "probe": ["go", "version"],
+    "version_pattern": "(?m)^go (?P<version>\\d+\\.\\d+(?:\\.\\d+)?)",
+    "detected_pattern": "go(?P<version>\\d+\\.\\d+(?:\\.\\d+)?)",
+    "version_policy": "minimum",
+    "requirement_level": "minimum-supported",
+    "version_requirement_source": "project-declared",
+    "environment_preparation": [
+      "Install the Go toolchain at or above the declared go.mod version, then re-run the policy audit."
+    ]
+  }
+}

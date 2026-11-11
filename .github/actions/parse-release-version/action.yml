@@ -1,0 +1,58 @@
+name: "Parse Release Version"
+description: "Extracts and validates SemVer version, tag, and date from a release branch or manual input."
+
+inputs:
+  branch_name:
+    description: "The source git branch name (e.g. release/v0.4.0)"
+    required: false
+    default: ""
+  version_input:
+    description: "Explicit SemVer version from workflow_dispatch (e.g. 0.4.0)"
+    required: false
+    default: ""
+
+outputs:
+  version:
+    description: "Semantic version without leading v (e.g. 0.4.0)"
+    value: ${{ steps.parse.outputs.version }}
+  tag:
+    description: "Release tag with leading v (e.g. v0.4.0)"
+    value: ${{ steps.parse.outputs.tag }}
+  date:
+    description: "Release date in YYYY-MM-DD format"
+    value: ${{ steps.parse.outputs.date }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: parse
+      shell: bash
+      run: |
+        VERSION_ARG="${{ inputs.version_input }}"
+        BRANCH="${{ inputs.branch_name }}"
+        BRANCH="${BRANCH#refs/heads/}"
+
+        if [[ -n "$VERSION_ARG" ]]; then
+          VERSION_CLEAN="${VERSION_ARG#v}"
+          if [[ ! "$VERSION_CLEAN" =~ ^([0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?)$ ]]; then
+            echo "ERROR: Version '$VERSION_ARG' is not valid SemVer (expected X.Y.Z)" >&2
+            exit 1
+          fi
+          VERSION="$VERSION_CLEAN"
+        else
+          PATTERN='^release/v([0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?)$'
+          if [[ ! "$BRANCH" =~ $PATTERN ]]; then
+            echo "ERROR: Branch '$BRANCH' does not match 'release/vX.Y.Z' and no version_input provided." >&2
+            exit 1
+          fi
+          VERSION="${BASH_REMATCH[1]}"
+        fi
+
+        TAG="v$VERSION"
+        DATE=$(date -u +'%Y-%m-%d')
+
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+        echo "date=$DATE" >> "$GITHUB_OUTPUT"
+
+        echo "Successfully parsed release version: $VERSION (tag: $TAG, date: $DATE)"

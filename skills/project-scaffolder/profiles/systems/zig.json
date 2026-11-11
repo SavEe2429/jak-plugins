@@ -1,0 +1,31 @@
+{
+  "domain": "systems",
+  "stack": "zig",
+  "name": "Zig Systems & High-Performance CLI",
+  "markers": [
+    "build.zig",
+    "build.zig.zon"
+  ],
+  "directories": [
+    "src",
+    "tests",
+    "Docs",
+    "logbook"
+  ],
+  "lfs_patterns": [],
+  "entry_points": [
+    {
+      "path": "src/main.zig",
+      "description": "Zig baseline executable unit",
+      "template": "const std = @import(\"std\");\n\npub fn add(a: i32, b: i32) i32 {\n    return a + b;\n}\n\npub fn main() void {\n    std.debug.print(\"Running {project_name}...\\n\", .{});\n}\n"
+    }
+  ],
+  "smoke_tests": [
+    {
+      "path": "tests/smoke_test.zig",
+      "description": "Zig smoke test fixture",
+      "template": "const std = @import(\"std\");\nconst main = @import(\"../src/main.zig\");\n\ntest \"smoke addition\" {\n    try std.testing.expectEqual(main.add(3, 4), 7);\n}\n"
+    }
+  ],
+  "ci_workflow": "name: {project_name} CI Pipeline\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - uses: mlugg/setup-zig@v1\n      - run: zig test tests/smoke_test.zig\n"
+}

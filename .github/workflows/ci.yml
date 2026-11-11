@@ -1,0 +1,122 @@
+name: jak-plugins CI Quality Gate
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  code-quality:
+    name: Manifests, JSON & Hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Verify Plugin Manifests & JSON Syntax
+        run: |
+          python3 .github/scripts/release/release_ops.py check-manifests
+          python3 -c "
+          import json, pathlib
+          for path in sorted(pathlib.Path('.').rglob('*.json')):
+              json.loads(path.read_text(encoding='utf-8'))
+          print('All JSON files parsed successfully.')
+          "
+
+      - name: Compile-Check Python Scripts
+        run: |
+          python3 -B -c "
+          import pathlib, py_compile
+          scripts = sorted(list(pathlib.Path('skills').rglob('*.py')) + list(pathlib.Path('.github').rglob('*.py')))
+          for path in scripts:
+              py_compile.compile(str(path), doraise=True)
+          print(f'Compiled {len(scripts)} Python files cleanly.')
+          "
+
+      - name: Verify Strict LF Line Endings
+        run: |
+          if grep -rn $'\r' --exclude-dir=.git .; then
+            echo "ERROR: CRLF line endings detected! Convert files to LF."
+            exit 1
+          fi
+
+  test:
+    name: Skill CLI Smoke Tests (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.14"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Verify project-scaffolder CLI & Dry-Run
+        run: |
+          python3 -B skills/project-scaffolder/scripts/scaffold.py --help >/dev/null
+          python3 -B skills/project-scaffolder/scripts/audit.py --help >/dev/null
+          python3 -B skills/project-scaffolder/scripts/discover.py --help >/dev/null
+          python3 -B skills/project-scaffolder/scripts/verify.py --help >/dev/null
+          TMP_DIR=$(mktemp -d)
+          python3 -B skills/project-scaffolder/scripts/scaffold.py \
+            --target-dir "$TMP_DIR" \
+            --domain web \
+            --stack fastapi \
+            --architecture layered \
+            --dry-run
+
+  package-check:
+    name: Verify Release Bundle Packaging
+    needs: [code-quality, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Build Test Bundle Archive
+        run: |
+          VERSION=$(python3 -c "import json; print(json.load(open('plugin.json', encoding='utf-8'))['version'])")
+          python3 .github/scripts/release/release_ops.py build-archive "$VERSION" --out-dir dist
+          test -f "dist/jak-plugins-v${VERSION}.zip"
+
+  summary:
+    name: CI Summary & Gate
+    needs: [code-quality, test, package-check]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write Workflow Summary
+        run: |
+          echo "### jak-plugins CI Quality Gate Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Job | Result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| :--- | :--- |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| code-quality | ${{ needs.code-quality.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| test | ${{ needs.test.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| package-check | ${{ needs.package-check.result }} |" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce Overall Gate
+        run: |
+          if [[ "${{ needs.code-quality.result }}" != "success" || "${{ needs.test.result }}" != "success" || "${{ needs.package-check.result }}" != "success" ]]; then
+            echo "One or more CI jobs failed."
+            exit 1
+          fi

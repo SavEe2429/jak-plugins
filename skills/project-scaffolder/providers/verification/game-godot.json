@@ -1,0 +1,101 @@
+{
+  "id": "verification.profile.game.godot",
+  "kind": "verification",
+  "schema_version": 1,
+  "capabilities": [
+    "verification-checks",
+    "project-readiness-policy"
+  ],
+  "payload": {
+    "checks": [
+      {
+        "id": "test-1",
+        "kind": "test",
+        "command": [
+          "godot",
+          "--headless",
+          "-s",
+          "addons/gut/gut_cmdln.gd",
+          "-gdir=res://tests",
+          "-gexit"
+        ],
+        "required": true,
+        "expected_evidence": {
+          "requires_assertions": true
+        },
+        "execution_policy": {
+          "mode": "exact-argv",
+          "allowed_argv": [
+            "godot",
+            "--headless",
+            "-s",
+            "addons/gut/gut_cmdln.gd",
+            "-gdir=res://tests",
+            "-gexit"
+          ],
+          "cwd_scope": "project-root",
+          "network_policy": "may-access-network",
+          "write_effects": [
+            "project-workspace"
+          ],
+          "timeout_seconds": 180,
+          "output_limit": 800,
+          "requires_confirmation": true
+        }
+      },
+      {
+        "id": "build-1",
+        "kind": "build",
+        "command": [
+          "godot",
+          "--headless",
+          "--export-release",
+          "\"Windows Desktop\"",
+          "build/game.exe"
+        ],
+        "required": true,
+        "expected_evidence": {},
+        "execution_policy": {
+          "mode": "exact-argv",
+          "allowed_argv": [
+            "godot",
+            "--headless",
+            "--export-release",
+            "\"Windows Desktop\"",
+            "build/game.exe"
+          ],
+          "cwd_scope": "project-root",
+          "network_policy": "may-access-network",
+          "write_effects": [
+            "project-workspace"
+          ],
+          "timeout_seconds": 240,
+          "output_limit": 800,
+          "requires_confirmation": true
+        }
+      }
+    ],
+    "project_policy": {
+      "config_manifests": [
+        "project.godot"
+      ],
+      "module_boundary_patterns": [
+        "project.godot"
+      ],
+      "mandatory_categories": [
+        1,
+        2,
+        3,
+        4,
+        7,
+        11,
+        13,
+        19
+      ],
+      "na_categories": [
+        5,
+        18
+      ]
+    }
+  }
+}

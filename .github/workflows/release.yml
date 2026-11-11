@@ -1,0 +1,97 @@
+name: Automated Release Orchestration
+
+on:
+  push:
+    branches:
+      - "release/v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (SemVer without v, e.g. 0.4.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  prepare-and-package:
+    name: Verify, Promote Changelog & Package Bundle
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.semver.outputs.version }}
+      tag: ${{ steps.semver.outputs.tag }}
+      date: ${{ steps.semver.outputs.date }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Parse SemVer release version
+        id: semver
+        uses: ./.github/actions/parse-release-version
+        with:
+          branch_name: ${{ github.ref }}
+          version_input: ${{ inputs.version }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Verify Quality Gate
+        run: |
+          python3 -B skills/project-scaffolder/scripts/scaffold.py --help >/dev/null
+          if grep -rn $'\r' --exclude-dir=.git .; then
+            echo "ERROR: CRLF line endings detected!"
+            exit 1
+          fi
+
+      - name: Sync Manifests & Promote Changelog
+        run: |
+          chmod +x .github/scripts/release/*.sh
+          python3 .github/scripts/release/release_ops.py sync-manifests "${{ steps.semver.outputs.version }}"
+          python3 .github/scripts/release/release_ops.py check-manifests
+          ./.github/scripts/release/update-changelog-file.sh "${{ steps.semver.outputs.version }}" "${{ steps.semver.outputs.date }}"
+          ./.github/scripts/release/generate-release-notes-file.sh "${{ steps.semver.outputs.version }}"
+          ./.github/scripts/release/update-release-notes-index.sh "${{ steps.semver.outputs.version }}" "${{ steps.semver.outputs.date }}"
+
+      - name: Build Distributable Archive & Checksums
+        run: |
+          python3 .github/scripts/release/release_ops.py build-archive "${{ steps.semver.outputs.version }}" --out-dir dist
+          (cd dist && sha256sum * > SHA256SUMS.txt)
+          ./.github/scripts/release/build-github-release-body.sh \
+            "${{ steps.semver.outputs.version }}" \
+            "docs/release-notes/v${{ steps.semver.outputs.version }}.md" \
+            "dist/SHA256SUMS.txt" \
+            "dist/RELEASE_BODY.md"
+
+      - name: Commit & Push Release Updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add plugin.json gemini-extension.json .claude-plugin/plugin.json CHANGELOG.md docs/release-notes/
+          git commit -m "chore(release): promote v${{ steps.semver.outputs.version }} [skip ci]" || true
+          git push origin HEAD:${{ github.ref_name }} || true
+
+      - name: Create Immutable Git Tag
+        run: |
+          git tag -fa "${{ steps.semver.outputs.tag }}" -m "Release ${{ steps.semver.outputs.tag }}"
+          git push origin "${{ steps.semver.outputs.tag }}" --force
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.semver.outputs.tag }}
+          name: "Release ${{ steps.semver.outputs.tag }}"
+          body_path: dist/RELEASE_BODY.md
+          files: |
+            dist/*.zip
+            dist/SHA256SUMS.txt
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

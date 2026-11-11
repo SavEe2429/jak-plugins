@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability Disclosure
+    url: https://github.com/SavEe2429/jak-plugins/blob/main/SECURITY.md
+    about: Please report security issues privately using the instructions in SECURITY.md.
+  - name: Installation & Usage Guide
+    url: https://github.com/SavEe2429/jak-plugins/blob/main/README.md
+    about: Check setup steps for Claude Code, OpenAI Codex CLI, Antigravity, and Gemini CLI.

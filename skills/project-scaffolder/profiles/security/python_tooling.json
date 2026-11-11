@@ -1,0 +1,43 @@
+{
+  "domain": "security",
+  "stack": "python_tooling",
+  "name": "Cybersecurity Assessment & Scanner Tooling",
+  "markers": [
+    "pyproject.toml:scapy",
+    "requirements.txt:scapy",
+    "payloads",
+    "scanners"
+  ],
+  "directories": [
+    "src/core/engine",
+    "src/core/orchestrator",
+    "src/modules/scanners",
+    "src/modules/probes",
+    "src/payloads/safe",
+    "src/reports/formatters",
+    "src/utils/crypto",
+    "tests/mock_targets",
+    "tests/unit",
+    "logbook",
+    "Docs"
+  ],
+  "lfs_patterns": [
+    "*.pcap",
+    "*.bin"
+  ],
+  "entry_points": [
+    {
+      "path": "src/utils/net_util.py",
+      "description": "Baseline network utility",
+      "template": "\"\"\"Network security helper for {project_name}.\"\"\"\n\ndef is_private_ip(ip_str: str) -> bool:\n    parts = [int(p) for p in ip_str.split('.') if p.isdigit()]\n    if len(parts) != 4:\n        return False\n    return parts[0] == 10 or (parts[0] == 172 and 16 <= parts[1] <= 31) or (parts[0] == 192 and parts[1] == 168)\n"
+    }
+  ],
+  "smoke_tests": [
+    {
+      "path": "tests/unit/test_net_util.py",
+      "description": "Pytest network util smoke test",
+      "template": "from src.utils.net_util import is_private_ip\n\ndef test_private_ip():\n    assert is_private_ip('192.168.1.1') is True\n    assert is_private_ip('8.8.8.8') is False\n"
+    }
+  ],
+  "ci_workflow": "name: {project_name} CI Pipeline\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - uses: astral-sh/setup-uv@v10\n      - run: uv run pytest tests\n"
+}

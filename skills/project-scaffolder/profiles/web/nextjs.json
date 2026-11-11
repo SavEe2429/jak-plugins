@@ -1,0 +1,41 @@
+{
+  "domain": "web",
+  "stack": "nextjs",
+  "name": "Next.js React Fullstack Web Application",
+  "markers": [
+    "next.config.js",
+    "next.config.mjs",
+    "next.config.ts",
+    "package.json:next"
+  ],
+  "directories": [
+    "src/app",
+    "src/components/ui",
+    "src/components/features",
+    "src/hooks",
+    "src/lib/api",
+    "src/lib/utils",
+    "src/types",
+    "public",
+    "tests/unit",
+    "tests/e2e",
+    "logbook",
+    "Docs"
+  ],
+  "lfs_patterns": [],
+  "entry_points": [
+    {
+      "path": "src/lib/utils/format.ts",
+      "description": "Baseline formatting utility",
+      "template": "/** Foundational utility for {project_name} */\nexport function formatLabel(name: string): string {\n  return name.trim().toLowerCase();\n}\n"
+    }
+  ],
+  "smoke_tests": [
+    {
+      "path": "tests/unit/format.test.ts",
+      "description": "Unit smoke test fixture",
+      "template": "import { describe, it, expect } from 'vitest';\nimport { formatLabel } from '../../src/lib/utils/format';\n\ndescribe('formatLabel', () => {\n  it('formats lowercase label correctly', () => {\n    expect(formatLabel('  MyProject ')).toBe('myproject');\n  });\n});\n"
+    }
+  ],
+  "ci_workflow": "name: {project_name} CI Pipeline\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  code-quality:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - uses: pnpm/action-setup@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version-file: '.nvmrc'\n          cache: pnpm\n      - run: pnpm install --frozen-lockfile\n      - run: pnpm lint\n\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - uses: pnpm/action-setup@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version-file: '.nvmrc'\n          cache: pnpm\n      - run: pnpm install --frozen-lockfile\n      - run: pnpm test\n      - run: pnpm build\n\n  summary:\n    needs: [code-quality, test]\n    if: always()\n    runs-on: ubuntu-latest\n    steps:\n      - name: Write Workflow Summary\n        run: |\n          echo \"### CI Quality Gate Summary\" >> $GITHUB_STEP_SUMMARY\n          echo \"| Job | Result |\" >> $GITHUB_STEP_SUMMARY\n          echo \"| :--- | :--- |\" >> $GITHUB_STEP_SUMMARY\n          echo \"| code-quality | ${{ needs.code-quality.result }} |\" >> $GITHUB_STEP_SUMMARY\n          echo \"| test | ${{ needs.test.result }} |\" >> $GITHUB_STEP_SUMMARY\n      - name: Enforce Overall Gate\n        run: |\n          if [[ \"${{ needs.code-quality.result }}\" != \"success\" || \"${{ needs.test.result }}\" != \"success\" ]]; then\n            echo \"One or more CI jobs failed.\"\n            exit 1\n          fi\n"
+}
