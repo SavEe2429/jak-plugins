@@ -45,7 +45,7 @@ Continuous Integration is organized into 4 standardized tiers plus an aggregated
 1. **Never bypass native runners:** Always invoke tools via the package manager runner (`uv run`, `pnpm exec`, `cargo`, `go`).
 2. **SSOT Toolchain Pinning (Zero Duplicate Version Strings):** Pin toolchain versions in a single canonical file (`.python-version` / `pyproject.toml`, `package.json` / `.nvmrc`, `go.mod`, `rust-toolchain.toml`, `global.json`) and configure CI actions to read directly from that file (`python-version-file`, `go-version-file`, `node-version-file`, `rust-toolchain.toml`) rather than hardcoding duplicate version numbers inside `.github/workflows/ci.yml`.
 3. **No console errors / zero warnings:** Warnings must be treated as errors in CI (e.g. `-D warnings` in Rust, `--strict` in linters).
-4. **Dynamic LTS / Latest Stable Version Policy:** Never rely on memorized or hardcoded version numbers for runtimes, dependencies, pre-commit hooks, or GitHub Actions (`@<latest-stable-major>`). Always resolve the active **LTS (Long-Term Support)** or **Latest Stable** version at scaffolding or audit time from official registries, GitHub Releases API, or Marketplace metadata.
+4. **Dynamic LTS / Latest Stable Version Policy:** Never rely on memorized or hardcoded version numbers for runtimes, dependencies, pre-commit hooks, or GitHub Actions. Always resolve the active **LTS (Long-Term Support)** or **Latest Stable** version at scaffolding or audit time from official registries, GitHub Releases API, or Marketplace metadata, and verify actual Git tag formats (`@v7` floating major tag vs `@v10.3.3` full SemVer tag) so CI runners never fail to resolve a tag.
 5. **Multi-Job DAG Architecture (`code-quality`, `test`, `build`, `summary`):**
    - Separate CI into distinct jobs connected via `needs:` so `code-quality` and `test` run in parallel and `build` runs only after upstream checks pass (`needs: [code-quality, test]`).
    - The `build` job must execute the project's declared build/packaging command and configured mode (matching the Single Source of Truth in the repository's build script or manifest).
@@ -55,28 +55,28 @@ Continuous Integration is organized into 4 standardized tiers plus an aggregated
      - **Step 2 — `Enforce Overall Gate` (for GitHub Branch Protection / Machine Gate):** Because `if: always()` causes the `summary` job to execute even when an upstream job fails or is cancelled, explicitly verify that every upstream `needs.<job>.result == "success"` and execute `exit 1` otherwise. This allows branch protection rulesets to require a single `CI Summary & Gate` status check to block broken PR merges.
 
 ```yaml
-  summary:
-    name: CI Summary & Gate
-    needs: [code-quality, test, build]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Write Workflow Summary
-        run: |
-          echo "### CI Quality Gate Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
-          echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
-          echo "| code-quality | ${{ needs.code-quality.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| test | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+summary:
+  name: CI Summary & Gate
+  needs: [code-quality, test, build]
+  if: always()
+  runs-on: ubuntu-latest
+  steps:
+    - name: Write Workflow Summary
+      run: |
+        echo "### CI Quality Gate Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
+        echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+        echo "| code-quality | ${{ needs.code-quality.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| test | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
 
-      - name: Enforce Overall Gate
-        run: |
-          if [[ "${{ needs.code-quality.result }}" != "success" || "${{ needs.test.result }}" != "success" || "${{ needs.build.result }}" != "success" ]]; then
-            echo "One or more CI jobs failed."
-            exit 1
-          fi
+    - name: Enforce Overall Gate
+      run: |
+        if [[ "${{ needs.code-quality.result }}" != "success" || "${{ needs.test.result }}" != "success" || "${{ needs.build.result }}" != "success" ]]; then
+          echo "One or more CI jobs failed."
+          exit 1
+        fi
 ```
 
 ---

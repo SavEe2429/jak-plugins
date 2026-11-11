@@ -39,5 +39,5 @@
       "template": "from src.utils.net_util import is_private_ip\n\ndef test_private_ip():\n    assert is_private_ip('192.168.1.1') is True\n    assert is_private_ip('8.8.8.8') is False\n"
     }
   ],
-  "ci_workflow": "name: {project_name} CI Pipeline\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - uses: astral-sh/setup-uv@v10\n      - run: uv run pytest tests\n"
+  "ci_workflow": "name: {project_name} CI Pipeline\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - uses: astral-sh/setup-uv@v10.3.3\n      - run: uv run pytest tests\n"
 }
