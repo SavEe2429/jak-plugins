@@ -7,7 +7,7 @@ description: >-
   from evidence and requirements, then verify every planned deliverable; stop on
   material ambiguity instead of silently omitting required setup.
 metadata:
-  version: "3.15.0"
+  version: "3.16.0"
 allowed-tools:
   - run_command
   - write_file

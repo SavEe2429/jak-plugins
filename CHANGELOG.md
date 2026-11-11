@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Bumped bundled `project-scaffolder` skill from `v3.15.0` to `v3.16.0`.
 - Hardened `scripts/core/safe_executor.py` working directory confinement using canonical `os.path.realpath` resolution, blocking unconfined parent path traversals (`..`), symlink escapes, and Windows junction redirects.
 - Updated `execute_safe_command` and `execute_safe_tokens` to require explicit `authorized_root` scopes without falling back to self-authorizing untrusted `cwd`.
 - Normalized whitespace assertions in capability contract tests (`test_capability_contracts.py`) to prevent false-negative test failures caused by automated Markdown prose wrapping.
