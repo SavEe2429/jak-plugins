@@ -51,3 +51,9 @@ repos:
         entry: python -B -m py_compile
         language: system
         types: [python]
+
+      - id: verify-strict-lf
+        name: Verify strict LF line endings across repository
+        entry: python -B -c "import pathlib, sys; skip = {'.git', '__pycache__', '.pytest_cache', '.ruff_cache', 'dist', 'build'}; bad = [str(p) for p in sorted(pathlib.Path('.').rglob('*')) if p.is_file() and not (skip & set(p.parts)) and b'\x00' not in p.read_bytes() and b'\r' in p.read_bytes()]; print('CRLF detected:', ', '.join(bad)) if bad else None; sys.exit(1 if bad else 0)"
+        language: system
+        pass_filenames: false
