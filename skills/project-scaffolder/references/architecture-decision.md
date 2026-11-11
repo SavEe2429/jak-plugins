@@ -65,42 +65,42 @@ Regardless of the chosen architectural pattern:
 
 To prevent attribute duplication, drift, and shotgun surgery when changing settings:
 
-| Layer | SSOT Mechanism | Anti-Pattern to Avoid |
-| :--- | :--- | :--- |
-| **Runtime Attributes & Settings** | Central typed schema/struct (e.g., Pydantic `BaseSettings`, Zod config, Serde `Config`, Go `struct`) loaded once at startup. | Scattered `os.environ.get()` calls or hardcoded constants in handlers/submodules. |
-| **Project Identity & Version** | The package manifest (`pyproject.toml`, `package.json`, `Cargo.toml`) is the authoritative source. CLI flags (`--version`) and docs read dynamically from package metadata. | Hardcoded version strings duplicated across code files, docs, and CLI runners. |
-| **Filesystem & State Anchors** | Application root anchor resolved dynamically (`Path(__file__).resolve().parent...`); `data/`, `logs/`, and `config/` paths derived relative to this anchor. | Naive relative paths (`./data.db`) that break when executed from different working directories. |
-| **Ecosystem Mappings** | • **Python:** `core/config.py` using `pydantic-settings`<br>• **Node/TS:** `src/config/index.ts` using `zod`<br>• **Go:** `internal/config/config.go`<br>• **Rust:** `src/config.rs` using `serde`<br>• **.NET:** `IOptions<AppSettings>` bound to `appsettings.json` | Re-reading config files or environment variables on every request or inside library functions. |
+| Layer                             | SSOT Mechanism                                                                                                                                                                                                                                                        | Anti-Pattern to Avoid                                                                           |
+| :-------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------- |
+| **Runtime Attributes & Settings** | Central typed schema/struct (e.g., Pydantic `BaseSettings`, Zod config, Serde `Config`, Go `struct`) loaded once at startup.                                                                                                                                          | Scattered `os.environ.get()` calls or hardcoded constants in handlers/submodules.               |
+| **Project Identity & Version**    | The package manifest (`pyproject.toml`, `package.json`, `Cargo.toml`) is the authoritative source. CLI flags (`--version`) and docs read dynamically from package metadata.                                                                                           | Hardcoded version strings duplicated across code files, docs, and CLI runners.                  |
+| **Filesystem & State Anchors**    | Application root anchor resolved dynamically (`Path(__file__).resolve().parent...`); `data/`, `logs/`, and `config/` paths derived relative to this anchor.                                                                                                           | Naive relative paths (`./data.db`) that break when executed from different working directories. |
+| **Ecosystem Mappings**            | • **Python:** `core/config.py` using `pydantic-settings`<br>• **Node/TS:** `src/config/index.ts` using `zod`<br>• **Go:** `internal/config/config.go`<br>• **Rust:** `src/config.rs` using `serde`<br>• **.NET:** `IOptions<AppSettings>` bound to `appsettings.json` | Re-reading config files or environment variables on every request or inside library functions.  |
 
 ### Test Topology & Hermetic Isolation Pattern
 
 A well-architected repository separates fast-feedback unit tests from resource-heavy integration suites:
 
-| Test Tier | Directory | Scope & Dependencies | Execution Target | Isolation Rule |
-| :--- | :--- | :--- | :--- | :--- |
-| **Unit Tests** | `tests/unit/` | Pure business logic, algorithmic models, mock-based protocol contracts. | Sub-second runtime. Run on every local change and PR quick-gate. | 100% memory/mocked. Zero real disk I/O, zero network calls. |
-| **Integration Tests** | `tests/integration/` | End-to-end HTTP/CLI flows, real SQLite/database fixtures, process lifecycles. | Comprehensive verification before merge/release. | Ephemeral sandboxing (`tmp_path`, `t.TempDir()`). Never write into repository tree. |
+| Test Tier             | Directory            | Scope & Dependencies                                                          | Execution Target                                                 | Isolation Rule                                                                      |
+| :-------------------- | :------------------- | :---------------------------------------------------------------------------- | :--------------------------------------------------------------- | :---------------------------------------------------------------------------------- |
+| **Unit Tests**        | `tests/unit/`        | Pure business logic, algorithmic models, mock-based protocol contracts.       | Sub-second runtime. Run on every local change and PR quick-gate. | 100% memory/mocked. Zero real disk I/O, zero network calls.                         |
+| **Integration Tests** | `tests/integration/` | End-to-end HTTP/CLI flows, real SQLite/database fixtures, process lifecycles. | Comprehensive verification before merge/release.                 | Ephemeral sandboxing (`tmp_path`, `t.TempDir()`). Never write into repository tree. |
 
 ### Granular Exception Handling & Error Boundaries Pattern
 
 To prevent masking programmer bugs (e.g. `NameError`, `TypeError`, typo assertions) and ensure actionable error recovery:
 
-| Layer | Permitted Handling | Forbidden Anti-Patterns | Rationale |
-| :--- | :--- | :--- | :--- |
-| **Subroutines & I/O** | Specific catch: `OSError`, `FileNotFoundError`, `PermissionError`, `ValueError`, `TimeoutError`. | Blind catch-alls: `except Exception:`, `catch (e: any)`, or empty `pass`. | Callers and handlers must understand exactly why an operation failed to perform valid recovery. |
-| **Exception Chaining** | Preserve root cause: `raise DomainError(...) from err` or `fmt.Errorf("...: %w", err)`. | Swallowing inner traceback: `raise DomainError(str(err))` without chaining. | Preserves full diagnostic stack traces for root-cause analysis. |
-| **Outer System Boundary** | Catch-all permitted **only** at outer gateway/entrypoint (e.g. ASGI middleware, CLI root runner). | Catch-alls buried in core business logic or utility helpers. | Centralizes structured crash logging (`exc_info=True`) and user-facing error formatting. |
+| Layer                     | Permitted Handling                                                                                | Forbidden Anti-Patterns                                                     | Rationale                                                                                       |
+| :------------------------ | :------------------------------------------------------------------------------------------------ | :-------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------- |
+| **Subroutines & I/O**     | Specific catch: `OSError`, `FileNotFoundError`, `PermissionError`, `ValueError`, `TimeoutError`.  | Blind catch-alls: `except Exception:`, `catch (e: any)`, or empty `pass`.   | Callers and handlers must understand exactly why an operation failed to perform valid recovery. |
+| **Exception Chaining**    | Preserve root cause: `raise DomainError(...) from err` or `fmt.Errorf("...: %w", err)`.           | Swallowing inner traceback: `raise DomainError(str(err))` without chaining. | Preserves full diagnostic stack traces for root-cause analysis.                                 |
+| **Outer System Boundary** | Catch-all permitted **only** at outer gateway/entrypoint (e.g. ASGI middleware, CLI root runner). | Catch-alls buried in core business logic or utility helpers.                | Centralizes structured crash logging (`exc_info=True`) and user-facing error formatting.        |
 
 ### Graceful Lifecycle and Signal Termination Pattern
 
 Long-running services must clean up safely upon receiving OS termination signals (`SIGINT`, `SIGTERM`):
 
-| Ecosystem | Lifecycle Mechanism | Cleanup Responsibilities |
-| :--- | :--- | :--- |
-| **Python** | `lifespan` async context manager (FastAPI/Starlette) or `signal.signal(signal.SIGTERM, ...)`. | Close database pools, complete pending tasks, flush log handlers. |
-| **Node / TypeScript** | `process.on('SIGTERM', async () => { ... })`. | Close HTTP server listeners, disconnect ORM/database clients, exit cleanly. |
-| **Go** | `signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)`. | Cancel context, wait on `sync.WaitGroup`, release lockfiles. |
-| **Rust** | `tokio::signal::ctrl_c()` or `signal_hook`. | Drop shared locks, flush disk buffers, shut down task runners. |
+| Ecosystem             | Lifecycle Mechanism                                                                           | Cleanup Responsibilities                                                    |
+| :-------------------- | :-------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------- |
+| **Python**            | `lifespan` async context manager (FastAPI/Starlette) or `signal.signal(signal.SIGTERM, ...)`. | Close database pools, complete pending tasks, flush log handlers.           |
+| **Node / TypeScript** | `process.on('SIGTERM', async () => { ... })`.                                                 | Close HTTP server listeners, disconnect ORM/database clients, exit cleanly. |
+| **Go**                | `signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)`.                                   | Cancel context, wait on `sync.WaitGroup`, release lockfiles.                |
+| **Rust**              | `tokio::signal::ctrl_c()` or `signal_hook`.                                                   | Drop shared locks, flush disk buffers, shut down task runners.              |
 
 ## Compose architecture with stack capabilities
 

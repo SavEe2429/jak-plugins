@@ -25,12 +25,12 @@ would materially change recommendations or an action.
 
 Use exactly these four lifecycle stages in project-aware output:
 
-| Stage | Meaning |
-|---|---|
-| Initial | Explore the problem/opportunity, ideate, research, compare options, test feasibility, decide whether and what to build |
-| Before | Prepare execution: define scope and requirements, write specifications, plan tasks, design architecture, prepare assets and environment |
-| During | Execute and operate the project: design, implement, produce, integrate, test continuously, secure, document, and maintain |
-| After | Complete and assess the current delivery: final QA, release, publish, hand over, review outcomes, maintain, and capture lessons |
+| Stage   | Meaning                                                                                                                                 |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Initial | Explore the problem/opportunity, ideate, research, compare options, test feasibility, decide whether and what to build                  |
+| Before  | Prepare execution: define scope and requirements, write specifications, plan tasks, design architecture, prepare assets and environment |
+| During  | Execute and operate the project: design, implement, produce, integrate, test continuously, secure, document, and maintain               |
+| After   | Complete and assess the current delivery: final QA, release, publish, hand over, review outcomes, maintain, and capture lessons         |
 
 Lifecycle stages are revisitable, not a one-way waterfall. Testing, research,
 security, and documentation may occur in multiple stages. A project can omit
@@ -44,24 +44,24 @@ overview matrix, Workstream Cards, or a separate Resource Catalog.
 
 Use exactly these columns, in this order:
 
-| Column | Required content |
-|---|---|
-| Workstream | One of the 16 universal Workstreams, in taxonomy order. All 16 must appear, including unrelated or unresolved Workstreams. |
-| Sub-workstream | Dynamic domain-specific breakdown; use a concise list within the cell. |
-| Task / Activity | Work needed to produce the project's deliverables; stop at capability-oriented granularity, not click-by-click instructions. |
-| Lifecycle Stage | Initial, Before, During, or After; stages are revisitable and may be omitted when irrelevant. |
-| Capability | Specific Agent ability required; label each item Core or Supporting. |
-| Work Rationale | Why the Capability is needed for its linked work item; mandatory for Supporting Capabilities. |
-| Importance | Required, Optional, or Conditional, with a short rationale where not obvious. |
-| Resource | Exact Agent Skill, MCP Server, or Plugin name; include type in the same item. Do not recommend general infrastructure/developer tools as Resources. |
-| Availability | Installed, Connected, Available Externally, Missing, Unknown, Native, CLI, or Platform; use only when supported by evidence. |
-| Recommendation Role | Primary, Alternative, or Complementary for the specific Capability. |
-| Match Type | Direct or Indirect. Explain the mechanism for every Indirect match. |
-| Verification | Verified, Partially Verified, or Unverified, with concise evidence/source. |
-| Practical Test | Passed, Failed, Not Tested, or Not Applicable. |
-| Evaluation | Evidence-based criteria scores/status; use concise values such as 4/5 or Insufficient Evidence. |
-| Overlap | Full Overlap, Partial Overlap, Complementary, or None Identified. |
-| Coverage / Gap | Covered, Partially Covered, No Resource Found, Insufficient Coverage, Unmet Capability, Unknown, or Not Yet Analyzed, as applicable. |
+| Column              | Required content                                                                                                                                    |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Workstream          | One of the 16 universal Workstreams, in taxonomy order. All 16 must appear, including unrelated or unresolved Workstreams.                          |
+| Sub-workstream      | Dynamic domain-specific breakdown; use a concise list within the cell.                                                                              |
+| Task / Activity     | Work needed to produce the project's deliverables; stop at capability-oriented granularity, not click-by-click instructions.                        |
+| Lifecycle Stage     | Initial, Before, During, or After; stages are revisitable and may be omitted when irrelevant.                                                       |
+| Capability          | Specific Agent ability required; label each item Core or Supporting.                                                                                |
+| Work Rationale      | Why the Capability is needed for its linked work item; mandatory for Supporting Capabilities.                                                       |
+| Importance          | Required, Optional, or Conditional, with a short rationale where not obvious.                                                                       |
+| Resource            | Exact Agent Skill, MCP Server, or Plugin name; include type in the same item. Do not recommend general infrastructure/developer tools as Resources. |
+| Availability        | Installed, Connected, Available Externally, Missing, Unknown, Native, CLI, or Platform; use only when supported by evidence.                        |
+| Recommendation Role | Primary, Alternative, or Complementary for the specific Capability.                                                                                 |
+| Match Type          | Direct or Indirect. Explain the mechanism for every Indirect match.                                                                                 |
+| Verification        | Verified, Partially Verified, or Unverified, with concise evidence/source.                                                                          |
+| Practical Test      | Passed, Failed, Not Tested, or Not Applicable.                                                                                                      |
+| Evaluation          | Evidence-based criteria scores/status; use concise values such as 4/5 or Insufficient Evidence.                                                     |
+| Overlap             | Full Overlap, Partial Overlap, Complementary, or None Identified.                                                                                   |
+| Coverage / Gap      | Covered, Partially Covered, No Resource Found, Insufficient Coverage, Unmet Capability, Unknown, or Not Yet Analyzed, as applicable.                |
 
 Render the Matrix as one Markdown table. Use lists inside each cell when a
 Workstream contains multiple sub-workstreams, work items, Capabilities, or
@@ -70,6 +70,7 @@ cross-cutting Resources traceable across every Workstream they support, using
 the same stable Resource identity where practical.
 
 **Cell formatting rules for maximum readability:**
+
 - Separate distinct items or statements inside cells with <br>•  instead of semicolons (;) in a single running paragraph.
 - For Capability and Work Rationale cells, explicitly separate Core and Supporting blocks on distinct lines: **Core:** ...<br>**Supporting:** ....
 - For Resource and Recommendation Role, put each distinct Resource on its own bullet line with its exact type or role prefix: • [Primary] ...<br>• [Supporting] ....
@@ -115,6 +116,7 @@ The Matrix is the only structured work/resource table. Do not replace it with
 cards, a second overview matrix, or a separate catalog table.
 
 When useful, add concise prose summaries outside the Matrix:
+
 - A **Quick Decision & Actionable Starting Plan** (Roadmap) upfront, organizing recommended skills into distinct lifecycle phases (e.g. Phase 1: Prototype MVP & Scoping, Phase 2: Daily Production & Micro-Workflows, Phase 3: Release & Operations).
 - **Normalized Resource Notes** grouped by functional categories (e.g. Foundational Coding & Micro-Workflows, Game Prototyping, Engine & Data, UI/Audio/Feel, Build/Release Automation, Optional Plugins) rather than dumped as a single repository list.
 - **Sources** grouped consistently with the functional categories.

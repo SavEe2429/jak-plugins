@@ -6,7 +6,7 @@
 
 ## The 10 Universal Capabilities
 
-```
+```text
 +------------------------------------------------------------------------+
 |                   10 UNIVERSAL AGENT CAPABILITIES                      |
 +--------------------------+---------------------------------------------+
@@ -34,13 +34,13 @@ Every specific capability must have one of these roles:
 
 Analyze both roles at every applicable level:
 
-| Level | Core capability question | Supporting capability question |
-|---|---|---|
-| Project | What must the Agent be able to do to help achieve the project outcome? | What cross-cutting methods help frame, plan, decide, coordinate, and improve the project? |
-| Workstream | What abilities produce this workstream's outcomes? | What practices improve the workstream across its sub-workstreams and tasks? |
-| Sub-workstream | What abilities produce this group's outputs? | What methods help organize, reason about, review, or coordinate this group of work? |
-| Task | What must the Agent do to complete this task? | What method makes the task better specified, planned, executed, reviewed, or verified? |
-| Activity | What ability is needed for this concrete activity? | What technique or review/decision aid improves this activity? |
+| Level          | Core capability question                                               | Supporting capability question                                                            |
+| -------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Project        | What must the Agent be able to do to help achieve the project outcome? | What cross-cutting methods help frame, plan, decide, coordinate, and improve the project? |
+| Workstream     | What abilities produce this workstream's outcomes?                     | What practices improve the workstream across its sub-workstreams and tasks?               |
+| Sub-workstream | What abilities produce this group's outputs?                           | What methods help organize, reason about, review, or coordinate this group of work?       |
+| Task           | What must the Agent do to complete this task?                          | What method makes the task better specified, planned, executed, reviewed, or verified?    |
+| Activity       | What ability is needed for this concrete activity?                     | What technique or review/decision aid improves this activity?                             |
 
 Examples of Supporting Capabilities include requirements grilling, brainstorming,
 option comparison, task breakdown, decision facilitation, design critique,

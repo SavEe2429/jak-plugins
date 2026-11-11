@@ -18,7 +18,7 @@ This framework enforces the **4-Gate Deduplication Architecture** and the **Know
 
 ## 2. The 4-Gate Deduplication Architecture
 
-```
+```text
 [Workflow / Fix Pattern Repeated >= 3 Times]
                      |
                      v
@@ -85,10 +85,12 @@ Consolidate operations around **Domain Entities and Resources** rather than spli
 - [ ] **Recommended Pattern (Lifecycle Consolidation):**
   - Single skill: `user-lifecycle-manager` or `compute-instance-manager`
   - Controlled via explicit subcommands or script parameters:
+
     ```bash
     python scripts/manage_user.py --action create --id user_01
     python scripts/manage_user.py --action update --id user_01
     ```
+
 - [ ] **Ownership Check:** If an existing skill already owns the target entity or domain, the new logic must merge into that skill's lifecycle script.
 
 ---
@@ -120,7 +122,7 @@ Eliminate routing ambiguity by defining explicit positive and negative activatio
 
 When an error pattern or workflow repeats 3 times, perform structured web research before synthesizing any skill:
 
-```
+```text
 [Candidate Pattern] --> [Web Search] --> [Verify Root Cause vs Symptom]
                                     --> [Identify Cascading Pitfalls / Breaking Changes]
                                     --> [Separate Knowledge vs Action (YAGNI)]

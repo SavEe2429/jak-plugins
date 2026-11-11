@@ -44,13 +44,13 @@ the tidy consistency result only.
 
 The registered audit parsers are provider-specific and bounded:
 
-| Provider | Output format | Parsed evidence | Important limits |
-| --- | --- | --- | --- |
-| uv | Preview JSON | Audited package, vulnerability, and adverse-status counts | Preview schema; no severity/license claim; current parser is count-only |
-| pnpm | `pnpm audit --json` report | Advisory ID, affected package/version, severity, patched versions, and registry report counts | Results reflect the configured registry and its ignore/filter behavior; no license verdict |
-| Cargo | `cargo audit --json` RustSec report | Advisory ID, crate/version, severity, patched versions, and warning counts | Database follows cargo-audit configuration; no license verdict |
-| Go Modules | govulncheck JSON message stream | OSV ID/aliases, affected module/package, fixed versions, and call-trace evidence | No severity/license field; repeated findings are deduplicated |
-| Unity UPM | None | Not applicable | No provider-declared vulnerability audit command |
+| Provider   | Output format                       | Parsed evidence                                                                               | Important limits                                                                           |
+| ---------- | ----------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| uv         | Preview JSON                        | Audited package, vulnerability, and adverse-status counts                                     | Preview schema; no severity/license claim; current parser is count-only                    |
+| pnpm       | `pnpm audit --json` report          | Advisory ID, affected package/version, severity, patched versions, and registry report counts | Results reflect the configured registry and its ignore/filter behavior; no license verdict |
+| Cargo      | `cargo audit --json` RustSec report | Advisory ID, crate/version, severity, patched versions, and warning counts                    | Database follows cargo-audit configuration; no license verdict                             |
+| Go Modules | govulncheck JSON message stream     | OSV ID/aliases, affected module/package, fixed versions, and call-trace evidence              | No severity/license field; repeated findings are deduplicated                              |
+| Unity UPM  | None                                | Not applicable                                                                                | No provider-declared vulnerability audit command                                           |
 
 An audit result separates command execution from parser status. Malformed,
 truncated, inconsistent, and over-limit output is `not-verified`. A parsed zero

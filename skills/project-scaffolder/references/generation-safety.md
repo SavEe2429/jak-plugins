@@ -17,7 +17,7 @@ A senior-grade scaffolder must be **safe by default**. Running the scaffolder ag
 
 ## 2. Decision Tree for Existing Files
 
-```
+```text
 Target File Exists?
        │
        ├── No  ──► Write File (LF Line Endings)

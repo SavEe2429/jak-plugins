@@ -4,10 +4,10 @@ A skill bundle for **Claude** (Claude Code), **GPT** (OpenAI Codex CLI) and
 **Gemini** (Antigravity and Gemini CLI).
 One `skills/` folder, thin adapters for each host.
 
-| Skill | What it does |
-|---|---|
+| Skill                | What it does                                                                                                                         |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `project-scaffolder` | Scaffold a new project or audit an existing one, using evidence-selected profiles (web, game, embedded, systems, AI/data, security). |
-| `skill-factory` | Discover, evaluate, select and compose skills, plugins, MCP servers and tools for a task. |
+| `skill-factory`      | Discover, evaluate, select and compose skills, plugins, MCP servers and tools for a task.                                            |
 
 ## Layout
 

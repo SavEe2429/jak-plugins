@@ -2,7 +2,7 @@
 
 `skill-factory` manages the lifecycle of agent capabilities across 6 stages with mandatory **Human-in-the-Loop (HIL)** checkpoints:
 
-```
+```text
 [1. DISCOVER EXTERNAL] --> [2. EVALUATE EXTERNAL] --> [3. DISCOVER INTERNAL]
                                                         |
                                                         v

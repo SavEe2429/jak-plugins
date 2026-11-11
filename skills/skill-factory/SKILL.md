@@ -116,6 +116,7 @@ Before invoking any deterministic Python script (`scaffold_skill.py`), the AI ag
   3. **Daily Micro-Workflow & Session Continuity (Supporting)**: Interactive design/requirement grilling (`grill-me`), spec drafting (`to-spec`), task decomposition (`to-tickets`), and context compaction across agent sessions (`handoff`).
   Pass primary queries via `--queries "<kw1>,<kw2>"`. Generic CLI tools and package managers are discovery/install syntax only, never Resources to recommend.
 - [ ] **Invoke Orchestrator with Normalized Signals**:
+
   ```bash
   uv run python .agents/skills/skill-factory/scripts/scaffold_skill.py --task "<raw_task>" --facets "<facet1>,<facet2>" --exclude-facets "<ex_facet>" --queries "<kw1>,<kw2>"
   ```

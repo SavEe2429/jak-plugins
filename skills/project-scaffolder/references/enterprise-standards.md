@@ -36,6 +36,7 @@ mkdocs.yml                             # Static site generator configuration (Ma
 Ensure 100% reproducible execution across local machines, CI runners, and cloud infrastructure:
 
 ### Multi-Stage `Dockerfile`
+
 - **Builder Stage:** Compiles code and downloads dependencies.
 - **Runtime Stage:**
   - Uses minimal base images (Distroless, Alpine, or Debian-slim).
@@ -44,7 +45,9 @@ Ensure 100% reproducible execution across local machines, CI runners, and cloud 
   - Explicit health check instruction (`HEALTHCHECK`).
 
 ### `.dockerignore`
+
 Excludes build caches, virtual environments, VCS metadata, tests, documentation, and local state:
+
 ```text
 .git
 .github
@@ -60,6 +63,7 @@ logs/*.log
 ```
 
 ### `.devcontainer/devcontainer.json`
+
 Provides a zero-friction, containerized development environment for VS Code and GitHub Codespaces with pre-installed linters, extensions, and pinned runtimes.
 
 ---
@@ -98,12 +102,14 @@ Enable smooth collaboration across multi-developer and multi-team organizations:
 
 1. **`.github/CODEOWNERS`:**
    - Automates review requests based on domain boundaries:
+
      ```text
      *                   @engineering-team
      /.github/           @devops-team
      /docs/              @tech-writers
      /src/core/          @architect-team
      ```
+
 2. **`.github/ISSUE_TEMPLATE/` (GitHub Issue Forms YAML):**
    - Prefer structured **GitHub Issue Forms (`.yml`)** over plain Markdown (`.md`) templates so GitHub renders interactive UI controls (`dropdown`, `input`, `textarea` with `render: shell`, `checkboxes`) and enforces server-side required fields (`validations: required: true`):
      - `bug_report.yml` (Component dropdown, version/OS inputs, steps to reproduce, expected vs actual behavior, auto-formatted shell logs, pre-submission checkboxes).

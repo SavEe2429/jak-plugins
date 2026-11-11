@@ -1,0 +1,18 @@
+default: true
+
+# Skill instructions and wide aligned tables intentionally exceed 80 characters.
+MD013: false
+
+# Allow line breaks and collapsible blocks inside Markdown tables and docs.
+MD033:
+  allowed_elements:
+    - br
+    - details
+    - summary
+
+# Prompt fragments and PR templates do not always begin with a top-level heading.
+MD041: false
+
+# Enforce vertically aligned (justified) table columns across all Markdown files.
+MD060:
+  style: aligned

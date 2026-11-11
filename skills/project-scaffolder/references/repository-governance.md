@@ -32,15 +32,16 @@ Every production-grade repository requires five pillars of governance, regardles
 
 Continuous Integration is organized into 4 standardized tiers plus an aggregated summary:
 
-| Tier | Purpose | Python | Node / TypeScript | Go | Rust | C# / .NET |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Tier 1: Style & Linter** | Static analysis, format, import sorting | `ruff check`, `ruff format --check` | `eslint`, `prettier --check`, `biome` | `golangci-lint` | `cargo clippy`, `cargo fmt --check` | `dotnet format --verify-no-changes` |
-| **Tier 2: Automated Tests** | Unit & integration tests with coverage | `pytest --cov` | `vitest`, `jest` | `go test -race ./...` | `cargo test` | `dotnet test` |
-| **Tier 3: Security Scan** | Static security audit & vulnerability scan | `bandit`, `pip-audit` | `pnpm audit` | `govulncheck ./...` | `cargo audit` | `dotnet list package --vulnerable` |
-| **Tier 4: Build Verification** | Package compilation & artifact validation | `uv build` | `pnpm build` | `go build ./...` | `cargo build --release` | `dotnet build -c Release` |
-| **Summary: Step Metrics** | Aggregated run stats & LOC report | `cloc`, GitHub Step Summary | `cloc`, GitHub Step Summary | `cloc`, GitHub Step Summary | `cloc`, GitHub Step Summary | `cloc`, GitHub Step Summary |
+| Tier                           | Purpose                                    | Python                              | Node / TypeScript                     | Go                          | Rust                                | C# / .NET                           |
+| :----------------------------- | :----------------------------------------- | :---------------------------------- | :------------------------------------ | :-------------------------- | :---------------------------------- | :---------------------------------- |
+| **Tier 1: Style & Linter**     | Static analysis, format, import sorting    | `ruff check`, `ruff format --check` | `eslint`, `prettier --check`, `biome` | `golangci-lint`             | `cargo clippy`, `cargo fmt --check` | `dotnet format --verify-no-changes` |
+| **Tier 2: Automated Tests**    | Unit & integration tests with coverage     | `pytest --cov`                      | `vitest`, `jest`                      | `go test -race ./...`       | `cargo test`                        | `dotnet test`                       |
+| **Tier 3: Security Scan**      | Static security audit & vulnerability scan | `bandit`, `pip-audit`               | `pnpm audit`                          | `govulncheck ./...`         | `cargo audit`                       | `dotnet list package --vulnerable`  |
+| **Tier 4: Build Verification** | Package compilation & artifact validation  | `uv build`                          | `pnpm build`                          | `go build ./...`            | `cargo build --release`             | `dotnet build -c Release`           |
+| **Summary: Step Metrics**      | Aggregated run stats & LOC report          | `cloc`, GitHub Step Summary         | `cloc`, GitHub Step Summary           | `cloc`, GitHub Step Summary | `cloc`, GitHub Step Summary         | `cloc`, GitHub Step Summary         |
 
-### CI Dynamic Rules:
+### CI Dynamic Rules
+
 1. **Never bypass native runners:** Always invoke tools via the package manager runner (`uv run`, `pnpm exec`, `cargo`, `go`).
 2. **SSOT Toolchain Pinning (Zero Duplicate Version Strings):** Pin toolchain versions in a single canonical file (`.python-version` / `pyproject.toml`, `package.json` / `.nvmrc`, `go.mod`, `rust-toolchain.toml`, `global.json`) and configure CI actions to read directly from that file (`python-version-file`, `go-version-file`, `node-version-file`, `rust-toolchain.toml`) rather than hardcoding duplicate version numbers inside `.github/workflows/ci.yml`.
 3. **No console errors / zero warnings:** Warnings must be treated as errors in CI (e.g. `-D warnings` in Rust, `--strict` in linters).
@@ -84,7 +85,8 @@ Continuous Integration is organized into 4 standardized tiers plus an aggregated
 
 Automate the entire release lifecycle without manual tag pushing. Human developers trigger a release simply by creating/pushing a release branch (`release/vX.Y.Z`).
 
-### The 4-Stage Release Workflow:
+### The 4-Stage Release Workflow
+
 1. **Validate & Parse Version:**
    - Detect branch name pattern `^release/v([0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?)$`.
    - Extract `version` (e.g. `1.2.0`), `tag` (`v1.2.0`), and `date` (`YYYY-MM-DD`).
@@ -109,11 +111,11 @@ Automate the entire release lifecycle without manual tag pushing. Human develope
 
 Maintain synchronized runbooks for both AI tools and human contributors:
 
-* **`AGENTS.md` (Operational Runbook):**
+- **`AGENTS.md` (Operational Runbook):**
   - Commands to discover, build, test, lint, and run the project using native runners.
   - Append-only logbook rules (`logbook/current.md` rotation at 500 lines).
   - Explicit boundaries (what tools/APIs are permitted).
-* **`.github/copilot-instructions.md` (Context-Aware AI Rules):**
+- **`.github/copilot-instructions.md` (Context-Aware AI Rules):**
   - **Project Overview & Purpose:** Clear problem statement and domain terminology.
   - **Technology Stack:** Pinned versions, core dependencies, and forbidden libraries.
   - **Architecture Boundaries:** Package encapsulation rules (entrypoints in `src/<package_name>/`, state in `data/`, no loose files in root).
@@ -143,10 +145,10 @@ Provide `.github/pull_request_template.md` to enforce quality before merge:
 
 Every project with GitHub Actions must include documentation explaining its pipelines:
 
-* **Workflow Catalog:** Table listing each workflow file, its triggers (`push`, `pull_request`, `workflow_dispatch`), and permissions.
-* **Secrets Reference:** Explicit table of required GitHub Secrets (e.g. `GITHUB_TOKEN`, registry API keys, signing certificates).
-* **Branch Protection Policies:** Recommended rules for protected branches (`main`, `develop`).
-* **Local Workflow Execution:** Actionable instructions on how to test workflows locally (e.g. using `act` or executing equivalent native commands).
+- **Workflow Catalog:** Table listing each workflow file, its triggers (`push`, `pull_request`, `workflow_dispatch`), and permissions.
+- **Secrets Reference:** Explicit table of required GitHub Secrets (e.g. `GITHUB_TOKEN`, registry API keys, signing certificates).
+- **Branch Protection Policies:** Recommended rules for protected branches (`main`, `develop`).
+- **Local Workflow Execution:** Actionable instructions on how to test workflows locally (e.g. using `act` or executing equivalent native commands).
 
 ---
 

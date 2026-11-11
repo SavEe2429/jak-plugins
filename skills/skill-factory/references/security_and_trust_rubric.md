@@ -20,25 +20,25 @@ Evaluation rubric used by `skill-factory` to vet third-party **Skills**, **Plugi
 
 Trust is not awarded merely because of a vendor name or repository popularity. `skill-factory` evaluates extensions across six empirical dimensions:
 
-| Dimension                            | Verification Evidence                           | High Trust Indicator                                                                        | Critical Risk Indicator                                                |
-| ------------------------------------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| **1. Publisher Authenticity**        | Vendor identity and cryptographic signatures    | Maintained by verified official vendors (Anthropic, Google, MCP, Microsoft, NVIDIA, Vercel) | Anonymous author, unverified fork, or typosquatting identity           |
-| **2. Source Provenance**             | Public source history and license               | Public repository, verifiable commit history, standard permissive license (MIT, Apache 2.0) | Closed-source binary, unpinned remote git URL, missing license         |
-| **3. Code Quality & Static AST**     | AST parsing of executable scripts               | Zero unreviewed dynamic calls (`eval`, `exec`), no `shell=True` subprocesses                | Obfuscated Base64 execution, dynamic code strings, syntax errors       |
-| **4. Permission Risk & Sandboxing**  | Declared tools plus independently verified host policy | Minimal, task-scoped declaration and separate evidence that the host enforces it            | Wildcard declarations or claims of enforcement without host evidence   |
-| **5. Runtime Behavior & Data-Flow**  | Source-to-sink data-flow analysis               | Clean separation of credentials from outbound network requests                              | Accessing `sensitive local configuration` / API tokens and transmitting to external sinks |
-| **6. Maintenance & Vulnerabilities** | Dependency security & CVE history               | Active commits in last 6 months, clean vulnerability audits                                 | Abandoned repository, unpinned pipe-to-shell downloads (`unsafe remote-script execution idioms`)  |
+| Dimension                            | Verification Evidence                                  | High Trust Indicator                                                                        | Critical Risk Indicator                                                                          |
+| ------------------------------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| **1. Publisher Authenticity**        | Vendor identity and cryptographic signatures           | Maintained by verified official vendors (Anthropic, Google, MCP, Microsoft, NVIDIA, Vercel) | Anonymous author, unverified fork, or typosquatting identity                                     |
+| **2. Source Provenance**             | Public source history and license                      | Public repository, verifiable commit history, standard permissive license (MIT, Apache 2.0) | Closed-source binary, unpinned remote git URL, missing license                                   |
+| **3. Code Quality & Static AST**     | AST parsing of executable scripts                      | Zero unreviewed dynamic calls (`eval`, `exec`), no `shell=True` subprocesses                | Obfuscated Base64 execution, dynamic code strings, syntax errors                                 |
+| **4. Permission Risk & Sandboxing**  | Declared tools plus independently verified host policy | Minimal, task-scoped declaration and separate evidence that the host enforces it            | Wildcard declarations or claims of enforcement without host evidence                             |
+| **5. Runtime Behavior & Data-Flow**  | Source-to-sink data-flow analysis                      | Clean separation of credentials from outbound network requests                              | Accessing `sensitive local configuration` / API tokens and transmitting to external sinks        |
+| **6. Maintenance & Vulnerabilities** | Dependency security & CVE history                      | Active commits in last 6 months, clean vulnerability audits                                 | Abandoned repository, unpinned pipe-to-shell downloads (`unsafe remote-script execution idioms`) |
 
 ---
 
 ## 3. Dynamic Evidence-Based Trust Tiers
 
-| Trust Classification                 | Empirical Evidence Required                                                                               | Operational Policy                                                                  |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Trust Classification                 | Empirical Evidence Required                                                                                                                              | Operational Policy                                                                  |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | **Tier 1: Verified Publisher**       | Maintained by verified vendor, clean AST scan, least-privilege declarations, independently evidenced host enforcement, and zero data exfiltration sinks. | **RECOMMENDED**: Trusted for recommendation with publisher attribution.             |
-| **Tier 2: Audited Open Source**      | Public source repo, verified commit history, permissive license, clean AST/data-flow scan, and reviewed permission declarations. | **AUDITED PASS**: Reusable with maintainer attribution and clear scope declaration. |
-| **Tier 3: Unverified / Third-Party** | Unknown author, unpinned repository, missing license, or unreviewed scripts.                              | **MANUAL AUDIT REQUIRED**: Line-by-line inspection required before execution.       |
-| **Tier 4: Malicious / Blocked**      | Obfuscated code, shell pipes, credential exfiltration patterns, prompt injections, or reverse shells.     | **STRICTLY BLOCKED**: Execution prohibited; immediate security notification.        |
+| **Tier 2: Audited Open Source**      | Public source repo, verified commit history, permissive license, clean AST/data-flow scan, and reviewed permission declarations.                         | **AUDITED PASS**: Reusable with maintainer attribution and clear scope declaration. |
+| **Tier 3: Unverified / Third-Party** | Unknown author, unpinned repository, missing license, or unreviewed scripts.                                                                             | **MANUAL AUDIT REQUIRED**: Line-by-line inspection required before execution.       |
+| **Tier 4: Malicious / Blocked**      | Obfuscated code, shell pipes, credential exfiltration patterns, prompt injections, or reverse shells.                                                    | **STRICTLY BLOCKED**: Execution prohibited; immediate security notification.        |
 
 ---
 

@@ -45,7 +45,7 @@ To eliminate rigid dogmatism while ensuring safety and portability, standards ar
 
 To protect the agent's context window while preserving deep technical depth:
 
-```
+```text
 [Skill Knowledge Root]
        |
        +-> SKILL.md (< 500 lines)  : Core workflow, non-negotiables, trigger index

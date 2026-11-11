@@ -6,14 +6,14 @@ Use this guide when a project is expected to publish or distribute a buildable a
 
 Classify the deliverable before proposing directories or workflows:
 
-| Target | Typical release concerns |
-| --- | --- |
+| Target                                                           | Typical release concerns                                                                                                                                       |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Binary executable application (e.g. PyInstaller, native CLI/GUI) | `packaging/` build definition, `out/<package_name>/` output destination, `onedir` vs `onefile` mode selection, icon/version assets, and platform build scripts |
-| Game or application | Supported platform, scenes/entry point, version, artifact naming/layout, build workflow, retention, and installer or archive when requested |
-| Reusable Unity UPM package | `package.json`, `Runtime/`, optional `Editor/`, tests, assembly definitions, changelog, version, package archive, and registry or Git distribution |
-| Library, CLI, or service package | Native package manifest, registry, version/tag policy, build artifact, release notes, and registry credentials handled through the platform's secret store |
-| Plugin, model, or asset bundle | Host compatibility, required files, license/provenance, versioning, archive layout, and delivery channel |
-| No distribution in scope | Mark release packaging N/A and do not create publish workflows or empty release directories |
+| Game or application                                              | Supported platform, scenes/entry point, version, artifact naming/layout, build workflow, retention, and installer or archive when requested                    |
+| Reusable Unity UPM package                                       | `package.json`, `Runtime/`, optional `Editor/`, tests, assembly definitions, changelog, version, package archive, and registry or Git distribution             |
+| Library, CLI, or service package                                 | Native package manifest, registry, version/tag policy, build artifact, release notes, and registry credentials handled through the platform's secret store     |
+| Plugin, model, or asset bundle                                   | Host compatibility, required files, license/provenance, versioning, archive layout, and delivery channel                                                       |
+| No distribution in scope                                         | Mark release packaging N/A and do not create publish workflows or empty release directories                                                                    |
 
 Ask for clarification only when the distribution target, supported platform, or delivery channel changes the planned layout. Keep a Unity game's player build separate from a reusable Unity UPM package: one is a runnable product artifact, the other is an importable dependency.
 
@@ -22,7 +22,9 @@ Ask for clarification only when the distribution target, supported platform, or 
 When an application is packaged into standalone binary executables (such as `.exe` on Windows or ELF/Mach-O on Linux/macOS):
 
 ### 1. Build Definition Root: `packaging/`
+
 All build definitions, configuration files, and assets necessary to produce binaries must reside under `packaging/`.
+
 - `packaging/`:
   - Build scripts: `build.py`, `build.bat`, or `build.sh` invoking the bundler.
   - Bundler specifications: `<package_name>.spec` (for PyInstaller) or equivalent bundler configurations.
@@ -30,8 +32,10 @@ All build definitions, configuration files, and assets necessary to produce bina
 - Keep `packaging/` isolated from core application source code (`src/`).
 
 ### 2. Output Artifact Destination: `out/<package_name>/`
+
 Compiled binaries and final packaged distributions must be output to:
 `out/<package_name>/`
+
 - Windows examples:
   - `out/<package_name>/<package_name>.exe` (for `onefile` mode)
   - `out/<package_name>/...` (for `onedir` mode, containing `<package_name>.exe` alongside dependencies and supporting runtime libraries)
@@ -39,7 +43,9 @@ Compiled binaries and final packaged distributions must be output to:
   - `out/` and `build/` (intermediate compiler cache) must be declared in `.gitignore` to prevent committing compiled binaries to the repository.
 
 ### 3. Packaging Mode Selection: `onedir` vs `onefile`
+
 When planning binary packaging, the agent must prompt the user to choose the desired packaging mode:
+
 - `onedir` (Directory bundle - default recommended for complex/large applications and services):
   - Produces a self-contained directory containing `<package_name>.exe` alongside required runtime libraries, dynamic links (DLLs), and assets, which is then archived (e.g. `.zip` or `.tar.gz`) for GitHub Releases.
   - Benefits: Faster startup time (no temporary extraction overhead on every launch), simpler incremental updates, native asset inspection, and easier debugging.
@@ -50,6 +56,7 @@ When planning binary packaging, the agent must prompt the user to choose the des
   - Tradeoffs: Cold-launch startup is slower because the bootloader must unpack contents into a temporary directory on each run.
 
 ### 4. Build Script Example (PyInstaller Integration)
+
 ```python
 # packaging/build.py
 import PyInstaller.__main__
@@ -82,7 +89,9 @@ def build(mode="onedir"):  # or "onefile"
 ```
 
 ### 5. Runtime State vs. Embedded Bundle Path Resolution (Frozen Binary Best Practice)
+
 Regardless of language or bundler (PyInstaller, Rust, Go, C# single-file publish, Tauri/Electron), packaged applications must strictly separate **read-only bundled assets** from **writable runtime state**:
+
 - **Bundle Root (Read-Only):** Static internal assets (UI templates, default schemas, embedded migrations) must resolve relative to the internal bundle extraction/resource root (e.g., `sys._MEIPASS` in frozen Python or embedded resource APIs in Rust/Go/C#).
 - **Runtime Root (Writable):** Mutable user configuration (`config/`), databases (`data/`), logs (`logs/`), and sandboxed workspaces (`workspace/`) must resolve relative to the executable's host directory (`Path(sys.executable).parent` / `os.Executable()`) or OS user-data directory — never inside the temporary bundle extraction folder.
 

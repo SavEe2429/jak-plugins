@@ -46,14 +46,14 @@ of the generated workflow.
 
 ## Choose checks by domain and risk
 
-| Work context | Candidate evidence to inspect | Use when |
-|---|---|---|
-| Software / systems | Build/run instructions, dependency reproducibility, automated checks, source control, security, release path | The task changes or delivers software |
-| Data / research | Source provenance, data permissions, methods, environment capture, reproducibility, review | Results depend on data or research claims |
-| Creative / media | Brief, source/asset rights, working files, target formats, review and export workflow | The task creates or transforms creative assets |
-| Business / operations | Source-of-truth records, calculation controls, approvals, access boundaries, reporting | Decisions or operations depend on records and controls |
-| Hardware / physical systems | Design constraints, simulation, test fixtures, device access, safety and deployment controls | Work affects firmware, devices, or physical processes |
-| Other / hybrid | Identify domain-specific evidence from the requested outcome | Existing profiles do not fit or multiple domains apply |
+| Work context                | Candidate evidence to inspect                                                                                | Use when                                               |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| Software / systems          | Build/run instructions, dependency reproducibility, automated checks, source control, security, release path | The task changes or delivers software                  |
+| Data / research             | Source provenance, data permissions, methods, environment capture, reproducibility, review                   | Results depend on data or research claims              |
+| Creative / media            | Brief, source/asset rights, working files, target formats, review and export workflow                        | The task creates or transforms creative assets         |
+| Business / operations       | Source-of-truth records, calculation controls, approvals, access boundaries, reporting                       | Decisions or operations depend on records and controls |
+| Hardware / physical systems | Design constraints, simulation, test fixtures, device access, safety and deployment controls                 | Work affects firmware, devices, or physical processes  |
+| Other / hybrid              | Identify domain-specific evidence from the requested outcome                                                 | Existing profiles do not fit or multiple domains apply |
 
 For each selected check, report one status:
 

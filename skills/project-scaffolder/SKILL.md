@@ -190,7 +190,7 @@ An audit is evidence-based and may report `NOT VERIFIED`. Configuration presence
 does not prove successful execution. Do not claim scaffolding complete while a
 mandatory check remains unverified.
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │              OPTIONAL 20-CATEGORY READINESS CATALOG                    │
 ├────────────────────────────┬───────────────────────────────────────────┤

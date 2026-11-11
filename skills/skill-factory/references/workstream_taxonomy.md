@@ -14,24 +14,24 @@ sub-workstreams without changing this universal taxonomy.
 
 ## The 16 universal workstreams
 
-| ID | Workstream | Scope |
-|---:|---|---|
-| 1 | Product Strategy & Discovery | Ideation, opportunity discovery, product direction, value proposition, MVP definition |
-| 2 | Research & Intelligence | Market, competitor, user, technical, scientific, and ecosystem research |
-| 3 | Requirements & Domain Analysis | Problem analysis, domain concepts, requirements, specifications, acceptance criteria, traceability |
-| 4 | Project & Program Management | Scope, roadmap, estimates, tasks, dependencies, schedule, resources, risks, coordination |
-| 5 | UX/UI & Experience Design | User journeys, interaction design, interface design, accessibility, usability |
-| 6 | System & Architecture Design | System boundaries, architecture, data models, interfaces, component and module design |
-| 7 | Engineering & Implementation | Software, firmware, hardware, and system implementation; coding, integration, debugging, refactoring |
-| 8 | Creative & Asset Production | Visual, audio, video, 3D, writing, and other creative asset production |
-| 9 | Data & Information Management | Data modeling, acquisition, processing, storage, migration, quality, governance |
-| 10 | Testing & Quality Assurance | Test strategy, unit/integration/system testing, playtesting, acceptance, quality verification |
-| 11 | Security, Safety & Compliance | Threat/risk assessment, privacy, safety, compliance, secure design, audits |
-| 12 | Infrastructure & Automation | Development environments, toolchains, CI, automation, infrastructure, build/test pipelines |
-| 13 | Delivery & Release Management | Packaging, release planning, publishing, deployment, distribution, handover |
-| 14 | Operations & Maintenance | Monitoring, support, incident response, maintenance, updates, live operations |
-| 15 | Documentation & Communication | Specifications, technical documents, records, reports, guides, stakeholder communication |
-| 16 | Evaluation & Continuous Improvement | Outcome evaluation, metrics, retrospectives, lessons learned, iterative improvement |
+| ID  | Workstream                          | Scope                                                                                                |
+| --: | ----------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 1   | Product Strategy & Discovery        | Ideation, opportunity discovery, product direction, value proposition, MVP definition                |
+| 2   | Research & Intelligence             | Market, competitor, user, technical, scientific, and ecosystem research                              |
+| 3   | Requirements & Domain Analysis      | Problem analysis, domain concepts, requirements, specifications, acceptance criteria, traceability   |
+| 4   | Project & Program Management        | Scope, roadmap, estimates, tasks, dependencies, schedule, resources, risks, coordination             |
+| 5   | UX/UI & Experience Design           | User journeys, interaction design, interface design, accessibility, usability                        |
+| 6   | System & Architecture Design        | System boundaries, architecture, data models, interfaces, component and module design                |
+| 7   | Engineering & Implementation        | Software, firmware, hardware, and system implementation; coding, integration, debugging, refactoring |
+| 8   | Creative & Asset Production         | Visual, audio, video, 3D, writing, and other creative asset production                               |
+| 9   | Data & Information Management       | Data modeling, acquisition, processing, storage, migration, quality, governance                      |
+| 10  | Testing & Quality Assurance         | Test strategy, unit/integration/system testing, playtesting, acceptance, quality verification        |
+| 11  | Security, Safety & Compliance       | Threat/risk assessment, privacy, safety, compliance, secure design, audits                           |
+| 12  | Infrastructure & Automation         | Development environments, toolchains, CI, automation, infrastructure, build/test pipelines           |
+| 13  | Delivery & Release Management       | Packaging, release planning, publishing, deployment, distribution, handover                          |
+| 14  | Operations & Maintenance            | Monitoring, support, incident response, maintenance, updates, live operations                        |
+| 15  | Documentation & Communication       | Specifications, technical documents, records, reports, guides, stakeholder communication             |
+| 16  | Evaluation & Continuous Improvement | Outcome evaluation, metrics, retrospectives, lessons learned, iterative improvement                  |
 
 ## Domain-specific sub-workstreams
 
@@ -41,24 +41,24 @@ create a new universal row for every domain term.
 
 Examples for game development:
 
-| Universal workstream | Example game sub-workstreams |
-|---|---|
-| Product Strategy & Discovery | Game concept, genre positioning, core loop, MVP definition, monetization hypothesis |
-| Research & Intelligence | Genre research, competitor/gameplay analysis, player research, platform research |
-| Requirements & Domain Analysis | Game Design Document (GDD), gameplay specification, feature specification, acceptance criteria |
-| Project & Program Management | Milestone planning, sprint/task planning, solo-developer workload management |
-| UX/UI & Experience Design | HUD, menus, onboarding, input flow, accessibility, player experience |
-| System & Architecture Design | Game architecture, scene structure, gameplay systems, event/state models, save architecture |
-| Engineering & Implementation | C# programming, gameplay programming, AI, combat, physics, animation logic, networking, debugging, refactoring |
-| Creative & Asset Production | Art direction, character art, sprites, animation, VFX, audio, music, 3D assets |
-| Data & Information Management | ScriptableObjects, game balance data, progression/economy data, save data |
-| Testing & Quality Assurance | EditMode/PlayMode tests, gameplay testing, compatibility, performance, balancing, regression |
-| Security, Safety & Compliance | Privacy, anti-cheat, platform compliance, age ratings, third-party asset/license checks |
-| Infrastructure & Automation | Unity tooling, version control, Git LFS, build automation, CI |
-| Delivery & Release Management | PC build, packaging, store submission, release candidate, patch delivery |
-| Operations & Maintenance | Crash triage, player support, patches, telemetry, community/live operations |
-| Documentation & Communication | GDD, technical design, API/code docs, changelog, player guide |
-| Evaluation & Continuous Improvement | Prototype evaluation, playtest analysis, KPI review, post-release evaluation |
+| Universal workstream                | Example game sub-workstreams                                                                                   |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Product Strategy & Discovery        | Game concept, genre positioning, core loop, MVP definition, monetization hypothesis                            |
+| Research & Intelligence             | Genre research, competitor/gameplay analysis, player research, platform research                               |
+| Requirements & Domain Analysis      | Game Design Document (GDD), gameplay specification, feature specification, acceptance criteria                 |
+| Project & Program Management        | Milestone planning, sprint/task planning, solo-developer workload management                                   |
+| UX/UI & Experience Design           | HUD, menus, onboarding, input flow, accessibility, player experience                                           |
+| System & Architecture Design        | Game architecture, scene structure, gameplay systems, event/state models, save architecture                    |
+| Engineering & Implementation        | C# programming, gameplay programming, AI, combat, physics, animation logic, networking, debugging, refactoring |
+| Creative & Asset Production         | Art direction, character art, sprites, animation, VFX, audio, music, 3D assets                                 |
+| Data & Information Management       | ScriptableObjects, game balance data, progression/economy data, save data                                      |
+| Testing & Quality Assurance         | EditMode/PlayMode tests, gameplay testing, compatibility, performance, balancing, regression                   |
+| Security, Safety & Compliance       | Privacy, anti-cheat, platform compliance, age ratings, third-party asset/license checks                        |
+| Infrastructure & Automation         | Unity tooling, version control, Git LFS, build automation, CI                                                  |
+| Delivery & Release Management       | PC build, packaging, store submission, release candidate, patch delivery                                       |
+| Operations & Maintenance            | Crash triage, player support, patches, telemetry, community/live operations                                    |
+| Documentation & Communication       | GDD, technical design, API/code docs, changelog, player guide                                                  |
+| Evaluation & Continuous Improvement | Prototype evaluation, playtest analysis, KPI review, post-release evaluation                                   |
 
 Examples for other domains should be selected from the actual project context.
 Do not force game-specific or software-specific sub-workstreams onto unrelated

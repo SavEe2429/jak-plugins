@@ -18,6 +18,7 @@ architecture quality.
   - In TypeScript/Node: Monorepo packages or domain modules (`packages/core`, `packages/api`).
   - No circular dependencies between modules.
 - **Directory Pattern:**
+
   ```text
   src/ or Assets/Scripts/
   ├── Core/          (Data models, pure business logic, zero engine dependency)
@@ -38,6 +39,7 @@ architecture quality.
   - External adapters (Database, HTTP, Message queues, CLI) depend inward on ports.
   - Extreme testability: Domain logic tested with pure in-memory mocks without external services.
 - **Directory Pattern:**
+
   ```text
   src/
   ├── domain/        (Entities, Value Objects, Domain Exceptions)
@@ -55,6 +57,7 @@ architecture quality.
   - Clear vertical flow of control: Presentation -> Service / Business -> Data Access -> Database.
   - Low cognitive overhead; ideal for rapid development and straightforward requirements.
 - **Directory Pattern:**
+
   ```text
   src/
   ├── controllers/   (or routes/ - HTTP request/response handling)
@@ -73,6 +76,7 @@ architecture quality.
   - Memory layout optimized for CPU cache lines and SIMD vectorization.
   - Strictly Zero GC and predictable frame budgets.
 - **Directory Pattern:**
+
   ```text
   src/ or Assets/Scripts/
   ├── Components/    (Blittable unmanaged structs, zero methods)
@@ -91,6 +95,7 @@ architecture quality.
   - Loose coupling between producer and consumer lifecycles.
   - Safe queue handling to prevent buffer overruns in memory-constrained environments.
 - **Directory Pattern:**
+
   ```text
   src/
   ├── events/        (Event structs, event IDs)
@@ -111,6 +116,7 @@ architecture quality.
 
 - **Component Layering (Clean Architecture and Ports/Adapters Alignment):**
   Within `src/<package_name>/`, partition code cleanly by architectural responsibility:
+
   ```text
   src/<package_name>/
   ├── __init__.py      (Package export and version metadata)
