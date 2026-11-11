@@ -137,3 +137,32 @@ architecture quality.
   3. **Direct Module Run**: Support module execution via `uv run python -m <package_name>`.
   4. **Binary Packaging**: `packaging/build.py` compiles `src/<package_name>/cli.py` and bundles embedded `interfaces/ui/` assets, emitting binaries to `out/<package_name>/`.
   5. **Modern Build Backend (PEP 517 / PEP 621)**: Python projects must declare a standardized modern build backend in `pyproject.toml` (e.g. `[build-system] requires = ["hatchling"] build-backend = "hatchling.build"`) to ensure clean builds and prevent legacy setuptools `*.egg-info` directories from polluting `src/`.
+
+---
+
+## 7. AI Agent and Model Context Protocol (MCP) Architecture Pattern
+
+- **Best Suited For:** Model Context Protocol (MCP) Servers, AI Agent Tooling Gateways, LLM Integration Services (Python, TypeScript, Go, Rust).
+- **Core Engineering Principles:**
+  1. **Stdio Transport Purity:** When communicating via standard input/output (`stdio`), `stdout` is reserved exclusively for JSON-RPC 2.0 frames. All runtime logging, debugging traces, and banner messages must be routed strictly to `stderr` or rotating log files. Polluting `stdout` with unstructured text immediately breaks protocol deserialization on host clients (Claude Code, Antigravity, Cursor).
+  2. **Tool Sandboxing & Working Directory Confinement:** All tools performing filesystem or shell operations must enforce strict path confinement. Resolve canonical paths using `os.path.realpath` / canonical path APIs, verify that target paths reside within authorized workspace boundaries via `.relative_to(authorized_root)`, and reject path traversal attempts (`..`, escaped symlinks, or junction points).
+  3. **Deterministic Schema Boundaries:** Define explicit parameter schemas (using Pydantic v2 in Python or Zod in TypeScript) with strict type hints, bounds, and clear descriptions. Tool outputs must return structured JSON or text payloads without unhandled exception tracebacks leaking to the client.
+  4. **Process Lifecycle & Graceful Shutdown:** Listen for `SIGINT` and `SIGTERM` signals to cleanly drain pending requests, flush buffers, and terminate spawned subprocess trees. Never leave orphaned child processes running when the host client disconnects.
+  5. **Zero Ambient State:** Configure tools via an explicit SSOT settings module (e.g., `pydantic-settings` or environment schema). Avoid relying on implicit global state or ambient working directory context.
+- **Directory Pattern:**
+
+  ```text
+  src/<package_name>/
+  ├── __init__.py        (Package version metadata and public exports)
+  ├── __main__.py        (CLI runner: `uv run python -m <package_name>`)
+  ├── server.py          (MCP server initialization, transport setup, and signal handling)
+  ├── config.py          (SSOT configuration, environment variables, authorized paths)
+  ├── tools/             (Discrete tool definitions and action handlers)
+  │   ├── __init__.py    (Tool registration and dispatcher)
+  │   ├── safe_path.py   (Canonical path confinement guard)
+  │   └── operations.py  (Domain tools with explicit schema validation)
+  ├── resources/         (Dynamic data providers and URI template routers)
+  ├── prompts/           (Reusable prompt templates and workflow recipes)
+  └── utils/
+      └── logging.py     (Stderr-only logger configuration)
+  ```

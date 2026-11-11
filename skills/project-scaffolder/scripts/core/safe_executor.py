@@ -44,6 +44,17 @@ UNSAFE_INTERPRETER_FLAGS = {
     "--loader", "--import", "--experimental-loader",
 }
 
+SAFE_GIT_SUBCOMMANDS: Set[str] = {
+    "status", "diff", "rev-parse", "log", "branch", "describe",
+    "tag", "config", "ls-files", "check-ignore", "version",
+}
+BLOCKED_PKG_MGR_SUBCOMMANDS: Set[str] = {
+    "exec", "publish", "login", "config", "init",
+}
+BLOCKED_CARGO_SUBCOMMANDS: Set[str] = {
+    "install", "publish", "login", "yank", "owner",
+}
+
 DEFAULT_MAX_SPOOL_BYTES = 5 * 1024 * 1024  # 5 MB monitored spool ceiling
 
 
@@ -87,10 +98,12 @@ class RestrictedExecutor:
         binary_allowlist: Optional[Set[str]] = None,
         interpreter_modules: Optional[dict] = None,
         max_spool_bytes: int = DEFAULT_MAX_SPOOL_BYTES,
+        authorized_root: Optional[Path] = None,
     ):
         self.binary_allowlist = binary_allowlist or SAFE_BINARY_WHITELIST
         self.interpreter_modules = interpreter_modules or SAFE_INTERPRETER_MODULES
         self.max_spool_bytes = max_spool_bytes
+        self.authorized_root = Path(os.path.realpath(str(authorized_root))) if authorized_root is not None else None
 
     def find_safe_executable(self, binary_name: str) -> Optional[str]:
         """Resolve an allowlisted executable through PATH."""
@@ -119,6 +132,29 @@ class RestrictedExecutor:
                 return "Inline/eval or dynamic module execution is blocked by policy."
             if any(arg in {"--eval", "--print", "-e", "-p"} for arg in args):
                 return "Inline/eval execution is blocked by policy."
+            return None
+        if name == "git":
+            if any(arg in {"-c", "--config-env"} or arg.startswith("--config-env=") for arg in args):
+                return "Git configuration overrides (-c / --config-env) are blocked by security policy."
+            if any(arg == "-C" for arg in args):
+                return "Git directory change flag (-C) is blocked by security policy; use cwd confinement instead."
+            subcmd = next((arg for arg in args if not arg.startswith("-")), None)
+            if subcmd is not None and subcmd.lower() not in SAFE_GIT_SUBCOMMANDS:
+                return f"Git subcommand '{subcmd}' is blocked by security policy; only read-only status and inspection commands are permitted."
+            return None
+        if name in {"npm", "pnpm", "yarn"}:
+            if any(arg in BLOCKED_PKG_MGR_SUBCOMMANDS for arg in args):
+                return "Package manager subcommand/flag is blocked by security policy."
+            return None
+        if name == "cargo":
+            subcmd = next((arg for arg in args if not arg.startswith("-")), None)
+            if subcmd is not None and subcmd.lower() in BLOCKED_CARGO_SUBCOMMANDS:
+                return f"Cargo subcommand '{subcmd}' is blocked by security policy."
+            return None
+        if name == "make":
+            if any(arg in {"-e", "--environment-overrides", "--eval"} or arg.startswith("--eval=") for arg in args):
+                return "Make environment overrides and eval flags are blocked by security policy."
+            return None
         return None
 
     def execute(
@@ -164,15 +200,25 @@ class RestrictedExecutor:
         if not isinstance(cwd, Path):
             cwd = Path(cwd)
         try:
-            resolved_cwd = cwd.resolve()
+            # Check for unconfined parent traversal before resolving
+            if any(part == ".." for part in cwd.parts):
+                if authorized_root is None and self.authorized_root is None:
+                    return VerificationResult(
+                        status="FAIL",
+                        command=display_command,
+                        message="Working directory contains unconfined parent path traversal ('..'); no process was started.",
+                    )
+
+            resolved_cwd = Path(os.path.realpath(str(cwd)))
             if not resolved_cwd.is_dir():
                 return VerificationResult(
                     status="FAIL",
                     command=display_command,
                     message=f"Working directory does not exist or is not a directory: {cwd}",
                 )
-            if authorized_root is not None:
-                resolved_root = Path(authorized_root).resolve()
+            effective_root = authorized_root if authorized_root is not None else self.authorized_root
+            if effective_root is not None:
+                resolved_root = Path(os.path.realpath(str(effective_root)))
                 try:
                     resolved_cwd.relative_to(resolved_root)
                 except ValueError:
@@ -363,7 +409,10 @@ def _validate_arguments(binary: str, args: List[str]) -> Optional[str]:
 
 
 def execute_safe_command(
-    cmd_str: str, cwd: Path, timeout_seconds: int = 120
+    cmd_str: str,
+    cwd: Path,
+    timeout_seconds: int = 120,
+    authorized_root: Optional[Path] = None,
 ) -> VerificationResult:
     """Parse a configured command and pass it through the same token policy."""
     if not cmd_str or not cmd_str.strip():
@@ -376,7 +425,13 @@ def execute_safe_command(
         )
     if not tokens:
         return VerificationResult(status="NOT APPLICABLE", message="No executable tokens found.")
-    return execute_safe_tokens(tokens, cwd, timeout_seconds, display_command=cmd_str)
+    return execute_safe_tokens(
+        tokens,
+        cwd,
+        timeout_seconds,
+        display_command=cmd_str,
+        authorized_root=authorized_root,
+    )
 
 
 def execute_safe_tokens(
@@ -397,7 +452,7 @@ def execute_safe_tokens(
         timeout_seconds=timeout_seconds,
         display_command=display_command,
         output_limit=output_limit,
-        authorized_root=authorized_root if authorized_root is not None else cwd,
+        authorized_root=authorized_root,
         allowed_argv=allowed_argv,
         provider_id=provider_id,
         operation_id=operation_id,

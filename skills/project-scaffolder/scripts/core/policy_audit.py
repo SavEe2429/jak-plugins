@@ -15,7 +15,9 @@ from core.verification import _redact_tokens
 def _probe_version(command, root):
     if not command:
         return {"status": "not-applicable", "version": None}
-    result = execute_safe_command(" ".join(command), cwd=root, timeout_seconds=5)
+    result = execute_safe_command(
+        " ".join(command), cwd=root, timeout_seconds=5, authorized_root=root
+    )
     output = (result.stdout or result.stderr).strip().splitlines()
     return {
         "status": result.status.lower().replace(" ", "-"),

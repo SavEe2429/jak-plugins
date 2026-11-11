@@ -44,7 +44,12 @@ def run_precommit(target_path: Path) -> VerificationResult:
             status="NOT APPLICABLE", message="No .pre-commit-config.yaml found."
         )
 
-    return execute_safe_command("pre-commit run --all-files", cwd=target_path, timeout_seconds=120)
+    return execute_safe_command(
+        "pre-commit run --all-files",
+        cwd=target_path,
+        timeout_seconds=120,
+        authorized_root=target_path,
+    )
 
 
 def _execute_profile_check(

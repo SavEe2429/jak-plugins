@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Architecture Reference pattern for AI Agent and Model Context Protocol (MCP) services in `project-scaffolder/references/architecture-catalog.md` (covering Stdio transport purity, graceful shutdown lifecycles, path confinement guards, deterministic Pydantic/Zod schemas, and canonical server layouts).
+- Multi-purpose binary subcommand inspection in `scripts/core/safe_executor.py` blocking arbitrary code execution or mutable operations via `git` (`push`, `clone`, `-c`, `-C`), `npm`/`pnpm`/`yarn` (`exec`, `publish`), `cargo` (`install`, `publish`), and `make` (`-e`, `--eval`).
+- Regression and unit tests for command security, working directory boundary enforcement, and dangerous subcommand rejection.
+
+### Changed
+
+- Hardened `scripts/core/safe_executor.py` working directory confinement using canonical `os.path.realpath` resolution, blocking unconfined parent path traversals (`..`), symlink escapes, and Windows junction redirects.
+- Updated `execute_safe_command` and `execute_safe_tokens` to require explicit `authorized_root` scopes without falling back to self-authorizing untrusted `cwd`.
+- Normalized whitespace assertions in capability contract tests (`test_capability_contracts.py`) to prevent false-negative test failures caused by automated Markdown prose wrapping.
+
+### Security
+
+- Enforced strict project root confinement and deny-by-default subcommand checks for multi-purpose development binaries in Tier-1 Restricted Executor (`safe_executor.py`).
+
 ## [1.0.0] - 2026-11-11
 
 ### Added
