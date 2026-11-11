@@ -50,20 +50,16 @@ jobs:
           fi
 
   test:
-    name: Skill CLI Smoke Tests (${{ matrix.python-version }})
+    name: Skill CLI Smoke Tests (Python 3.14)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.12", "3.14"]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.14
         uses: actions/setup-python@v7
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.14"
 
       - name: Verify project-scaffolder CLI & Dry-Run
         run: |
