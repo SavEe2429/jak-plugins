@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-11
+
 ### Added
 
 - Specialized Issue Form (`.github/ISSUE_TEMPLATE/skill_gap.yml`) for reporting AI agent guidance drift, prompt gaps, and ecosystem mismatches.
