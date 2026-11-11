@@ -1,8 +1,8 @@
-"""Release Operations Script for jak-plugins.
+"""Release Manager CLI for jak-plugins.
 
-Cross-platform release orchestration tool providing manifest version checking
-and synchronization, bundle zip archiving, changelog promotion, release notes
-generation, index updating, and GitHub release body formatting.
+Cross-platform release orchestration and packaging tool providing manifest version
+checking and synchronization, bundle zip packaging, changelog promotion, release
+notes generation, index updating, and GitHub release body formatting.
 """
 
 ## ---------- (01) STANDARD LIBRARY IMPORTS ----------------------------------------- ##
@@ -213,7 +213,7 @@ def build_release_body(
 ## ---------- (08) PRIVATE FUNCTIONS ------------------------------------------------ ##
 def _parse_args() -> argparse.Namespace:
     """Parse CLI release operation subcommands."""
-    parser = argparse.ArgumentParser(description="jak-plugins Release Operations CLI")
+    parser = argparse.ArgumentParser(description="jak-plugins Release Manager CLI")
     subparsers = parser.add_subparsers(dest="subcommand", required=True)
 
     subparsers.add_parser("check-manifests")

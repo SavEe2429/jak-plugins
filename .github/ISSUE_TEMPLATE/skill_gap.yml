@@ -1,0 +1,75 @@
+name: Skill Gap Report (AI Guidance & Prompts)
+description: Report when an AI skill gave incorrect, outdated, hallucinated, or stack-mismatched guidance.
+title: "[skill-gap]: "
+labels: ["enhancement", "skill-gap"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form when an AI skill in **jak-plugins** gave **incorrect, outdated, hallucinated, or ecosystem-mismatched guidance** to your coding agent.
+
+        > **Looking for a code bug or script crash?** If a Python helper script crashed, threw an unhandled exception, or a CLI command failed, please submit a [Bug Report](https://github.com/SavEe2429/jak-plugins/issues/new?template=bug_report.yml) instead.
+
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Affected Skill
+      description: Which skill produced mismatched or misleading guidance?
+      options:
+        - "skills/project-scaffolder"
+        - "skills/skill-factory"
+        - "commands/ or prompts/ adapter"
+        - "Other / Cross-Skill Interaction"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: host_client
+    attributes:
+      label: Host AI Client & Model
+      description: Which coding agent was running this skill?
+      options:
+        - "Claude Code (Claude 3.7 / 3.5 Sonnet)"
+        - "Antigravity (Gemini 2.5 / 3.x)"
+        - "Gemini CLI"
+        - "OpenAI Codex CLI"
+        - "Cursor / Windsurf"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: excerpt
+    attributes:
+      label: Misleading Instruction or Excerpt
+      description: Paste the exact line, checklist item, or passage from SKILL.md (or a linked reference) that misled the agent or failed.
+      placeholder: "e.g. In references/repository-governance.md, the checklist required npm test but this is a uv Python project..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: project_context
+    attributes:
+      label: Target Project Context
+      description: Domain, language, build tool, framework, package manager, and OS where the issue happened.
+      placeholder: "e.g. Python 3.12, FastAPI, uv, Windows 11 / PowerShell"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what_failed
+    attributes:
+      label: What Did Not Work or What Went Wrong
+      description: What did the agent do when following the skill? How did it deviate or fail?
+      placeholder: "e.g. The agent attempted to create a flat tests/ directory instead of tests/unit/ and hallucinated virtualenv paths."
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround / What You Did Instead
+      description: How did you (or the agent) get unblocked? (Very helpful for tuning the skill prompt).
+      placeholder: "e.g. Manually told the agent to run `uv run pytest` and follow the modular monolith pattern."
+    validations:
+      required: false

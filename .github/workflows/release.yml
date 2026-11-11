@@ -32,7 +32,7 @@ jobs:
 
       - name: Parse SemVer release version
         id: semver
-        uses: ./.github/actions/parse-release-version
+        uses: ./.github/actions/parse_release_version
         with:
           branch_name: ${{ github.ref }}
           version_input: ${{ inputs.version }}
@@ -52,22 +52,21 @@ jobs:
 
       - name: Sync Manifests & Promote Changelog
         run: |
-          chmod +x .github/scripts/release/*.sh
-          python3 .github/scripts/release/release_ops.py sync-manifests "${{ steps.semver.outputs.version }}"
-          python3 .github/scripts/release/release_ops.py check-manifests
-          ./.github/scripts/release/update-changelog-file.sh "${{ steps.semver.outputs.version }}" "${{ steps.semver.outputs.date }}"
-          ./.github/scripts/release/generate-release-notes-file.sh "${{ steps.semver.outputs.version }}"
-          ./.github/scripts/release/update-release-notes-index.sh "${{ steps.semver.outputs.version }}" "${{ steps.semver.outputs.date }}"
+          python3 .github/scripts/release_manager.py sync-manifests "${{ steps.semver.outputs.version }}"
+          python3 .github/scripts/release_manager.py check-manifests
+          python3 .github/scripts/release_manager.py update-changelog "${{ steps.semver.outputs.version }}" "${{ steps.semver.outputs.date }}"
+          python3 .github/scripts/release_manager.py generate-notes "${{ steps.semver.outputs.version }}"
+          python3 .github/scripts/release_manager.py update-index "${{ steps.semver.outputs.version }}" "${{ steps.semver.outputs.date }}"
 
       - name: Build Distributable Archive & Checksums
         run: |
-          python3 .github/scripts/release/release_ops.py build-archive "${{ steps.semver.outputs.version }}" --out-dir dist
+          python3 .github/scripts/release_manager.py build-archive "${{ steps.semver.outputs.version }}" --out-dir dist
           (cd dist && sha256sum * > SHA256SUMS.txt)
-          ./.github/scripts/release/build-github-release-body.sh \
+          python3 .github/scripts/release_manager.py build-body \
             "${{ steps.semver.outputs.version }}" \
-            "docs/release-notes/v${{ steps.semver.outputs.version }}.md" \
-            "dist/SHA256SUMS.txt" \
-            "dist/RELEASE_BODY.md"
+            --notes "docs/release-notes/v${{ steps.semver.outputs.version }}.md" \
+            --checksums "dist/SHA256SUMS.txt" \
+            --out "dist/RELEASE_BODY.md"
 
       - name: Commit & Push Release Updates
         run: |
@@ -95,3 +94,17 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge Release Updates Back to Default Branch
+        if: startsWith(github.ref, 'refs/heads/release/')
+        run: |
+          DEFAULT_BRANCH="${{ github.event.repository.default_branch || 'main' }}"
+          git fetch origin "${DEFAULT_BRANCH}:${DEFAULT_BRANCH}"
+          git checkout "${DEFAULT_BRANCH}"
+          git merge --ff-only "origin/${{ github.ref_name }}" || git merge -m "chore(release): merge ${{ steps.semver.outputs.tag }} back into ${DEFAULT_BRANCH} [skip ci]" "origin/${{ github.ref_name }}"
+          git push origin "${DEFAULT_BRANCH}"
+
+      - name: Delete Ephemeral Release Branch
+        if: startsWith(github.ref, 'refs/heads/release/')
+        run: |
+          git push origin --delete "${{ github.ref_name }}"

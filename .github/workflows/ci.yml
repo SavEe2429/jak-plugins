@@ -24,7 +24,7 @@ jobs:
 
       - name: Verify Plugin Manifests & JSON Syntax
         run: |
-          python3 .github/scripts/release/release_ops.py check-manifests
+          python3 .github/scripts/release_manager.py check-manifests
           python3 -c "
           import json, pathlib
           for path in sorted(pathlib.Path('.').rglob('*.json')):
@@ -49,6 +49,10 @@ jobs:
             echo "ERROR: CRLF line endings detected! Convert files to LF."
             exit 1
           fi
+
+      - name: Validate Markdown Reference Links Integrity
+        run: |
+          python3 .github/scripts/validate_reference_links.py
 
   test:
     name: Skill CLI Smoke Tests (Python 3.14)
@@ -92,12 +96,40 @@ jobs:
       - name: Build Test Bundle Archive
         run: |
           VERSION=$(python3 -c "import json; print(json.load(open('plugin.json', encoding='utf-8'))['version'])")
-          python3 .github/scripts/release/release_ops.py build-archive "$VERSION" --out-dir dist
+          python3 .github/scripts/release_manager.py build-archive "$VERSION" --out-dir dist
           test -f "dist/jak-plugins-v${VERSION}.zip"
+
+  plugin-validation:
+    name: Plugin Manifest & Hermetic Install Smoke Test
+    needs: [code-quality]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Validate Plugin & Marketplace Manifests
+        run: claude plugin validate .
+
+      - name: Configure Git for Local Marketplace
+        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
+
+      - name: Test Marketplace Registration & Plugin Install
+        run: |
+          claude plugin marketplace add ./
+          claude plugin marketplace list
+          claude plugin install jak-plugins@jak-plugins-marketplace --scope user
 
   summary:
     name: CI Summary & Gate
-    needs: [code-quality, test, package-check]
+    needs: [code-quality, test, package-check, plugin-validation]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -110,10 +142,11 @@ jobs:
           echo "| code-quality | ${{ needs.code-quality.result }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| test | ${{ needs.test.result }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| package-check | ${{ needs.package-check.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| plugin-validation | ${{ needs.plugin-validation.result }} |" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Enforce Overall Gate
         run: |
-          if [[ "${{ needs.code-quality.result }}" != "success" || "${{ needs.test.result }}" != "success" || "${{ needs.package-check.result }}" != "success" ]]; then
+          if [[ "${{ needs.code-quality.result }}" != "success" || "${{ needs.test.result }}" != "success" || "${{ needs.package-check.result }}" != "success" || "${{ needs.plugin-validation.result }}" != "success" ]]; then
             echo "One or more CI jobs failed."
             exit 1
           fi

@@ -1,5 +1,6 @@
 {
   "name": "jak-plugins-marketplace",
+  "description": "Official Jak Plugins marketplace carrying project-scaffolder and skill-factory skills.",
   "owner": {
     "name": "SavEe2429"
   },

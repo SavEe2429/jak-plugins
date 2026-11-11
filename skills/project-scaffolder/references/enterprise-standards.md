@@ -90,9 +90,20 @@ Protect the repository against malicious dependencies, credentials leakage, and 
 1. **`SECURITY.md`:**
    - Declares the project's Vulnerability Disclosure Policy, supported release versions, response SLAs, and dedicated security contact.
 2. **`.github/dependabot.yml`:**
-   - Schedules automated weekly vulnerability scans and dependency version bumps for package manifests and GitHub Actions workflows.
-3. **Secret Leak Prevention (`.gitleaks.toml`):**
-   - Configures pre-commit and CI scans with Gitleaks / detect-private-key to block accidental commits of passwords, private keys, or API tokens.
+   - Schedules automated weekly vulnerability scans and dependency version bumps for package manifests and GitHub Actions workflows with cooldown periods (e.g. 7 days).
+3. **Secret Leak Prevention (`.gitleaks.toml` & TruffleHog):**
+   - Configures pre-commit and CI scans with Gitleaks / detect-private-key.
+   - For CI secret verification, use TruffleHog OSS (`trufflesecurity/trufflehog`) with `fetch-depth: 0` and `--results=verified` to eliminate noisy unverified false positives.
+4. **GitHub Actions Workflow Static Security Analysis (`.github/workflows/zizmor.yml`):**
+   - Runs `zizmorcore/zizmor-action` on PRs and main pushes to statically analyze GitHub Actions workflows for token leaks, code injection vulnerabilities, unpinned third-party actions, and permission escalation risks.
+5. **Scheduled Vulnerability Drift Detection (`.github/workflows/osv-scanner.yml`):**
+   - Uses `google/osv-scanner-action` on a weekly schedule (`cron: "30 12 * * 1"`) to scan locked dependency trees (`uv.lock`, `package-lock.json`, `pnpm-lock.yaml`, `Cargo.lock`, `go.sum`). Uploads SARIF results to GitHub Code Scanning so newly disclosed CVEs surface without requiring code commits.
+6. **OpenSSF Scorecard Supply-Chain Audit (`.github/workflows/scorecard.yml`):**
+   - Runs weekly OpenSSF Scorecard analysis to track branch protection health, dangerous workflow patterns, token permissions, and maintenance signals; publishes results using OIDC.
+7. **Containerized Multi-Language SAST Scanning (Semgrep):**
+   - Runs Semgrep CE inside official Docker container images (`semgrep/semgrep`) with default community rulesets (`p/default`). Applied advisory-first (`continue-on-error: true`) until a clean baseline is confirmed.
+8. **Build Provenance & Cryptographic Attestation (SLSA / Sigstore):**
+   - In production release workflows, generate cryptographic build attestations for release assets using `actions/attest-build-provenance` backed by GitHub's Sigstore OIDC infrastructure, guaranteeing artifact provenance and tampering resistance.
 
 ---
 

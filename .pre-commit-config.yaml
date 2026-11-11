@@ -46,10 +46,17 @@ repos:
     hooks:
       - id: check-plugin-manifests
         name: Verify plugin manifest versions match
-        entry: python -B .github/scripts/release/release_ops.py check-manifests
+        entry: python -B .github/scripts/release_manager.py check-manifests
         language: system
         pass_filenames: false
         files: ^(plugin\.json|gemini-extension\.json|\.claude-plugin/plugin\.json)$
+
+      - id: validate-reference-links
+        name: Validate Markdown reference links integrity
+        entry: python -B .github/scripts/validate_reference_links.py
+        language: system
+        pass_filenames: false
+        files: \.md$
 
       - id: python-compile-check
         name: Compile-check Python scripts

@@ -9,21 +9,29 @@ Use this reference when designing or scaffolding repository governance, CI/CD pi
 Every production-grade repository requires five pillars of governance, regardless of stack:
 
 ```text
+changelog.d/                         # Towncrier-style release fragments (<pr-or-issue>.<type>.md)
 .github/
 ├── ISSUE_TEMPLATE/                  # GitHub Issue Forms (.yml) & chooser config
-│   ├── bug_report.yml               # Structured bug report form with required validations
+│   ├── bug_report.yml               # Technical bug report (crashes, exceptions, CLI & manifest errors)
+│   ├── skill_gap.yml                # AI prompt & guidance gap report (hallucinations, stack mismatch)
 │   ├── feature_request.yml          # Structured feature proposal form
-│   └── config.yml                   # Issue chooser settings & external contact links
+│   └── config.yml                   # Issue chooser settings & security advisory link
 ├── actions/                         # Reusable composite actions
-│   └── parse-release-version/       # Dynamic SemVer extraction & validation
-├── scripts/                         # Deterministic POSIX/Bash/PWSH governance scripts
-│   └── release/                     # Changelog promotion, release notes, release body
+│   └── parse_release_version/       # Dynamic SemVer extraction & validation
+├── scripts/                         # Deterministic release & manifest sync scripts
+│   ├── release_manager.py           # Multi-manifest sync, changelog promotion & bundle packager
+│   ├── prepare_release.py           # Towncrier compiler & multi-manifest lockstep version bumper
+│   ├── read_manifest_version.py     # Safe non-inline manifest version reader
+│   └── validate_reference_links.py  # Markdown reference links integrity scanner
 ├── workflows/                       # GitHub Actions pipelines
 │   ├── ci.yml                       # Multi-job DAG quality gate (code-quality, test, build, summary)
-│   ├── release.yml                  # Automated release & tag orchestration
+│   ├── changelog_guard.yml          # PR gate: enforces changelog.d fragments & blocks CHANGELOG.md edits
+│   ├── prepare_release.yml          # Manual dispatch: compiles fragments, bumps versions, opens PR
+│   ├── tag_release.yml              # Verified tag creation on merge of release PR to main
+│   ├── release.yml                  # Automated release build, packaging, checksums, and publish
 │   └── README.md                    # Self-documenting workflow runbook & local testing
-├── copilot-instructions.md          # AI Assistant & Copilot domain/architecture rules
-└── pull_request_template.md         # Contributor & Reviewer dual checklist
+├── copilot-instructions.md          # AI Assistant & Copilot domain, architecture & vendor rules
+└── pull_request_template.md         # Contributor/Reviewer checklists, Agent disclosure, COI statement
 ```
 
 ---
@@ -45,11 +53,19 @@ Continuous Integration is organized into 4 standardized tiers plus an aggregated
 1. **Never bypass native runners:** Always invoke tools via the package manager runner (`uv run`, `pnpm exec`, `cargo`, `go`).
 2. **SSOT Toolchain Pinning (Zero Duplicate Version Strings):** Pin toolchain versions in a single canonical file (`.python-version` / `pyproject.toml`, `package.json` / `.nvmrc`, `go.mod`, `rust-toolchain.toml`, `global.json`) and configure CI actions to read directly from that file (`python-version-file`, `go-version-file`, `node-version-file`, `rust-toolchain.toml`) rather than hardcoding duplicate version numbers inside `.github/workflows/ci.yml`.
 3. **No console errors / zero warnings:** Warnings must be treated as errors in CI (e.g. `-D warnings` in Rust, `--strict` in linters).
-4. **Dynamic LTS / Latest Stable Version Policy:** Never rely on memorized or hardcoded version numbers for runtimes, dependencies, pre-commit hooks, or GitHub Actions. Always resolve the active **LTS (Long-Term Support)** or **Latest Stable** version at scaffolding or audit time from official registries, GitHub Releases API, or Marketplace metadata, and verify actual Git tag formats (`@v7` floating major tag vs `@v10.3.3` full SemVer tag) so CI runners never fail to resolve a tag.
-5. **Multi-Job DAG Architecture (`code-quality`, `test`, `build`, `summary`):**
+4. **Dynamic LTS / Latest Stable Version Policy & Full-SHA Pinning:**
+   - Never rely on memorized or hardcoded version numbers for runtimes, dependencies, pre-commit hooks, or GitHub Actions. Always resolve active **LTS** or **Latest Stable** versions.
+   - **Full-SHA Action Pinning:** In production repositories, pin third-party GitHub Actions to immutable full commit SHAs with a trailing human-readable SemVer comment (e.g. `uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1`), complying with OpenSSF Scorecard and SLSA Level 3 supply-chain standards.
+5. **Zero-Trust Token Permissions & Hygiene:**
+   - Set top-level `permissions: {}` at the root of every workflow to disable default write tokens.
+   - Declare minimal, least-privilege permissions per job (e.g. `contents: read`, `pull-requests: read`).
+   - Use `persist-credentials: false` in `actions/checkout` so tokens are not retained in the runner's local Git configuration.
+6. **Cross-Platform Verification & Subprocess Isolation:**
+   - When project code executes external processes, handles OS signals, or manages filesystem paths, include a dedicated `windows-latest` or matrix job (e.g. `windows-process-tree`) to verify process tree termination and signal handling parity across POSIX and Windows.
+7. **Multi-Job DAG Architecture (`code-quality`, `test`, `build`, `summary`):**
    - Separate CI into distinct jobs connected via `needs:` so `code-quality` and `test` run in parallel and `build` runs only after upstream checks pass (`needs: [code-quality, test]`).
    - The `build` job must execute the project's declared build/packaging command and configured mode (matching the Single Source of Truth in the repository's build script or manifest).
-6. **Dual-Audience `summary` Gate Job (`$GITHUB_STEP_SUMMARY` + `Enforce Overall Gate`):**
+8. **Dual-Audience `summary` Gate Job (`$GITHUB_STEP_SUMMARY` + `Enforce Overall Gate`):**
    - Always include a final `summary` job with `needs: [code-quality, test, build]` (or all active upstream jobs) and `if: always()` containing two distinct steps for two audiences:
      - **Step 1 — `Write Workflow Summary` (for Humans):** Appends a Markdown table of job results to `$GITHUB_STEP_SUMMARY` so developers and reviewers see a visual summary table on the GitHub Actions run page.
      - **Step 2 — `Enforce Overall Gate` (for GitHub Branch Protection / Machine Gate):** Because `if: always()` causes the `summary` job to execute even when an upstream job fails or is cancelled, explicitly verify that every upstream `needs.<job>.result == "success"` and execute `exit 1` otherwise. This allows branch protection rulesets to require a single `CI Summary & Gate` status check to block broken PR merges.
@@ -83,27 +99,92 @@ summary:
 
 ## 3. Generic SemVer Release Automation
 
-Automate the entire release lifecycle without manual tag pushing. Human developers trigger a release simply by creating/pushing a release branch (`release/vX.Y.Z`).
+Automate the release lifecycle safely. Projects can select between two release architectures based on team scale and contributor model:
 
-### The 4-Stage Release Workflow
+### Option A: Decoupled 3-Stage Release Automation (Recommended for Teams & Multi-Agent Swarms)
 
-1. **Validate & Parse Version:**
-   - Detect branch name pattern `^release/v([0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?)$`.
-   - Extract `version` (e.g. `1.2.0`), `tag` (`v1.2.0`), and `date` (`YYYY-MM-DD`).
-   - Block if branch naming does not comply with SemVer.
-2. **Promote Changelog:**
-   - Scan `CHANGELOG.md` following [Keep a Changelog](https://keepachangelog.com/).
-   - Promote `## [Unreleased]` block into `## [vX.Y.Z] - YYYY-MM-DD`.
-   - Fall back to GitHub PR/commit history only if `[Unreleased]` is empty.
-3. **Generate Versioned Release Notes:**
-   - Extract the newly promoted section into a standalone versioned doc (e.g. `docs/release-notes/vX.Y.Z.md`).
-   - Update the release notes index table.
-4. **Build, Tag & Publish:**
-   - Execute the stack-specific release build (Tier 4).
-   - Generate SHA-256 checksums (`sha256sum * > SHA256SUMS.txt`).
-   - Merge release branch into `main` (or default branch).
-   - Create immutable Git tag (`vX.Y.Z`).
-   - Publish GitHub Release attaching binary artifacts, changelog notes, and checksums.
+In active multi-contributor or multi-agent repositories, concurrent edits to `CHANGELOG.md` create constant merge conflicts. The **Towncrier / Fragment Pattern** with a decoupled 3-stage release avoids conflicts and prevents unauthorized version bumps:
+
+```text
+PR Workflow:
+  Contributor adds changelog.d/<pr-number>.<type>.md (types: added, changed, fixed, removed, deprecated, security)
+  changelog-guard.yml blocks direct edits to CHANGELOG.md and blocks non-release version bumps
+
+Stage 1: Prepare Release (prepare_release.yml)
+  - Triggered via workflow_dispatch with SemVer bump type (patch, minor, major) or explicit version
+  - Runs .github/scripts/prepare_release.py to compile changelog.d/ fragments into CHANGELOG.md
+  - Updates all version manifests in lockstep (pyproject.toml, SKILL.md, plugin.json, etc.)
+  - Opens a release branch (release/vX.Y.Z) and PR with label 'release'
+
+Stage 2: Tag Release (tag_release.yml)
+  - Triggered when a commit matching 'chore(release): bump version to X.Y.Z' merges to main
+  - Verifies that the merged PR carries the repository-controlled 'release' label (security gate preventing spoofing)
+  - Verifies commit message version matches manifest SSOT
+  - Creates and pushes annotated Git tag vX.Y.Z
+  - Dispatches release.yml
+
+Stage 3: Build & Publish Release (release.yml)
+  - Triggered by workflow_dispatch with tag parameter from tag_release.yml
+  - Verifies Git tag locally (gh release create --verify-tag)
+  - Executes multi-platform matrix builds (e.g. cross-compiling binaries, packaging bundles)
+  - Computes SHA-256 checksums
+  - Publishes GitHub Release with auto-generated release notes and attached distribution assets
+```
+
+#### Changelog Guard Gate (`changelog_guard.yml`)
+
+Enforces release discipline across all feature PRs:
+
+1. **Blocks Direct CHANGELOG Edits:** Fails if `CHANGELOG.md` is modified directly in a feature PR (requires `changelog.d/` fragment).
+2. **Enforces Version Lockstep:** Fails if any manifest version is changed outside an authorized release PR.
+3. **Exemptions:** Bypasses checks if PR has label `release`, label `skip-changelog`, or is authored by `dependabot[bot]`.
+
+#### Manifest Version Helpers (`.github/scripts/`)
+
+- `read_manifest_version.py`: Standalone CLI helper to extract SemVer strings across heterogeneous formats (TOML, JSON, YAML frontmatter) without brittle inline Python scripts in Actions YAML.
+- `prepare_release.py`: Deterministic compiler that consumes `changelog.d/` fragments, prepends the new release section to `CHANGELOG.md`, and updates all manifest versions simultaneously.
+
+---
+
+### Option B: Ephemeral Branch-Triggered 5-Stage Release Workflow (Auto-Merge & Self-Cleaning)
+
+Suitable for smaller or single-maintainer repositories that want a fully automated release triggered simply by creating and pushing a release branch (`release/vX.Y.Z`). The workflow builds the release, mints the tag, merges updates back to the default branch, and cleans up the temporary release branch automatically:
+
+```text
+Developer Action:
+  git checkout -b release/v1.1.0 && git push origin release/v1.1.0
+
+Workflow Execution (.github/workflows/release.yml):
+  Stage 1: Parse SemVer & Verify Quality Gate
+    - Extracts version (1.1.0), tag (v1.1.0), and release date via .github/actions/parse_release_version
+    - Runs linting and line-ending checks (CRLF check)
+
+  Stage 2: Synchronize Manifests & Promote Changelog
+    - Syncs version across all manifest files (release_manager.py sync-manifests)
+    - Promotes [Unreleased] to [1.1.0] - YYYY-MM-DD in CHANGELOG.md
+    - Extracts standalone release notes to docs/release-notes/v1.1.0.md and indexes in README.md
+
+  Stage 3: Package Distribution Bundle & Generate Checksums
+    - Packages distributable zip archive into dist/ (release_manager.py build-archive)
+    - Computes SHA-256 hashes (sha256sum * > SHA256SUMS.txt)
+    - Formats combined release body (release_manager.py build-body)
+
+  Stage 4: Commit Updates, Tag & Publish GitHub Release
+    - Commits manifest/changelog/docs changes to release branch with [skip ci]
+    - Creates immutable annotated Git tag (git tag -fa v1.1.0 -m "Release v1.1.0") and pushes tag
+    - Publishes GitHub Release attaching the distributable archives and SHA256SUMS.txt
+
+  Stage 5: Auto-Merge Back to Default Branch & Self-Clean Branch
+    - Merges the release commit back into main to ensure CHANGELOG.md and manifests stay in sync:
+        git fetch origin main:main
+        git checkout main
+        git merge --ff-only origin/release/v1.1.0 || git merge -m "chore(release): merge v1.1.0 back into main [skip ci]" origin/release/v1.1.0
+        git push origin main
+    - Deletes the ephemeral release branch from origin (git push origin --delete release/v1.1.0)
+    - Deletion Guard: Strictly guarded with `if: startsWith(github.ref, 'refs/heads/release/')` to prevent accidental deletion when invoked via manual workflow_dispatch on default branches.
+
+Branch Protection Governance:
+  - When repository branch protection requires pull request reviews on 'main', use Option A (Decoupled 3-Stage with PR) OR add github-actions[bot] to the branch protection bypass list for direct release merges.
 
 ---
 
@@ -119,6 +200,8 @@ Maintain synchronized runbooks for both AI tools and human contributors:
   - **Project Overview & Purpose:** Clear problem statement and domain terminology.
   - **Technology Stack:** Pinned versions, core dependencies, and forbidden libraries.
   - **Architecture Boundaries:** Package encapsulation rules (entrypoints in `src/<package_name>/`, state in `data/`, no loose files in root).
+  - **Vendor Exclusion Zones:** Explicitly define no-touch vendor directories (e.g. `Never suggest changes to vendor/ or third-party subtrees`).
+  - **Safe Local CLI Examples:** When suggesting CLI usage for testing, default to safe flags (e.g. `--mock`, `--dry-run`, `--emit=compact`).
   - **Code Quality Requirements:** Formatting tools, type annotations, error handling conventions, and test-driven design rules.
 
 ---
@@ -127,16 +210,19 @@ Maintain synchronized runbooks for both AI tools and human contributors:
 
 Provide `.github/pull_request_template.md` to enforce quality before merge:
 
-1. **Change Classification:** Checkbox selection mapped directly to Conventional Commits:
-   - `feat` (new feature)
-   - `fix` (bug fix)
-   - `refactor` (code reorganization without behavior change)
-   - `perf` (performance optimization)
-   - `test` (test suite updates)
-   - `docs` (documentation updates)
-   - `chore` (maintenance, build, or dependency updates)
-2. **Dual-Role Verification Checklists:**
-   - **Contributor Checklist:** Self-review completed, no redundant comments, linters/formatters pass, no compiler warnings, tests added, documentation/changelog updated.
+1. **Change Classification:** Checkbox selection mapped directly to Conventional Commits (`feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `chore`).
+2. **Changelog Fragment Enforcement:**
+   - Require adding `changelog.d/<pr-number>.<type>.md` (types: `added`, `changed`, `fixed`, `removed`, `deprecated`, `security`).
+   - Or explicitly selecting `[ ] Skip changelog — chore/internal only` (with `skip-changelog` label).
+   - Strict reminder: **Do NOT edit `CHANGELOG.md` directly in feature PRs.**
+3. **Agent Disclosure & AI Review Summary:**
+   - Require author to summarize any AI coding agent review performed: tools used, main risks evaluated, flagged issues, and changes verified.
+4. **Security Risk Assessment:**
+   - Explicit review of input validation, shell command execution, path traversal, auth, secrets handling, or dependency additions.
+5. **Relationship & Conflict of Interest (COI) Disclosure:**
+   - Require disclosure of employment, contracting, equity, or commercial ties to any third-party company/service added or promoted by the PR.
+6. **Dual-Role Verification Checklists:**
+   - **Contributor Checklist:** Self-review completed, no redundant comments, linters/formatters pass, no compiler warnings, tests added, documentation updated.
    - **Reviewer Checklist:** Adheres to architecture and separation of concerns, test coverage verified, security posture preserved, backward compatibility checked.
 
 ---
@@ -215,15 +301,52 @@ When scaffolding, evaluate and deliver the complete set of standard files:
 - [ ] Test Harness: Unit test suite with verified assertion (`tests/unit/` or `Assets/Tests/EditMode/`)
 - [ ] CI Quality Gate: `.github/workflows/ci.yml` (Multi-job DAG: `code-quality`, `test`, `build`, and `summary` gate with `$GITHUB_STEP_SUMMARY` + `Enforce Overall Gate`)
 - [ ] Issue Forms & Governance: `.github/ISSUE_TEMPLATE/bug_report.yml`, `.github/ISSUE_TEMPLATE/feature_request.yml`, `.github/ISSUE_TEMPLATE/config.yml`
-- [ ] Universal Release Actions & Scripts:
-  - [ ] `.github/actions/parse-release-version/action.yml`
-  - [ ] `.github/scripts/release/get-previous-tag.sh`
-  - [ ] `.github/scripts/release/update-changelog-file.sh`
-  - [ ] `.github/scripts/release/generate-release-notes-file.sh`
-  - [ ] `.github/scripts/release/update-release-notes-index.sh`
-  - [ ] `.github/scripts/release/build-github-release-body.sh`
-  - [ ] `.github/workflows/release.yml`
+- [ ] Universal Release Actions & Scripts (Option A: Decoupled 3-Stage OR Option B: Branch-Triggered):
+  - [ ] `changelog.d/` fragment directory with `changelog.d/README.md`
+  - [ ] `.github/workflows/changelog_guard.yml` (PR fragment enforcement & version lock)
+  - [ ] `.github/workflows/prepare_release.yml` (Towncrier compilation & lockstep bumps)
+  - [ ] `.github/workflows/tag_release.yml` (Verified tag minting on main merge)
+  - [ ] `.github/scripts/prepare_release.py` & `.github/scripts/read_manifest_version.py`
+  - [ ] `.github/actions/parse_release_version/action.yml` (for Option B)
+  - [ ] `.github/scripts/release_manager.py` (Cross-platform Python release manager for Option B)
+  - [ ] `.github/workflows/release.yml` (Build, bundle, checksum, and GitHub release)
 - [ ] Workflow Documentation: `.github/workflows/README.md`
-- [ ] Contributor & AI Governance: `README.md`, `CHANGELOG.md`, `AGENTS.md`, `.github/copilot-instructions.md`, `.github/pull_request_template.md`
+- [ ] Contributor & AI Governance: `README.md`, `CHANGELOG.md`, `AGENTS.md`, `.github/copilot-instructions.md` (with vendor exclusions), `.github/pull_request_template.md` (with Agent & COI disclosure)
+- [ ] AI Skill & Plugin Governance (when applicable):
+  - [ ] `.github/ISSUE_TEMPLATE/skill_gap.yml` (Prompt feedback & instruction gap reporting)
+  - [ ] `.github/scripts/validate_reference_links.py` (Markdown reference links integrity check)
+  - [ ] Plugin validation & install smoke test job in `.github/workflows/ci.yml` (`claude plugin validate .` & local marketplace install)
 - [ ] Operational Logbook: `logbook/README.md` & `logbook/current.md` (append-only)
 ```
+
+---
+
+## 10. AI Agent Skill & Plugin Repository Archetype
+
+When the target project is an **Agent Skill, Plugin, or MCP Server bundle** (e.g. for Claude Code, Antigravity, Gemini CLI, Cursor, or Codex), standard software templates must be augmented with AI-specific governance and validation:
+
+### 1. Specialized Issue Template: `skill_gap.yml`
+
+Standard bug reports asking for stacktraces and step-by-step reproduction fail to capture the primary failure mode of AI skills: **instruction drift, ambiguous guidelines, hallucination, or ecosystem mismatch**.
+
+Include `.github/ISSUE_TEMPLATE/skill_gap.yml` with:
+
+- **Affected skill dropdown:** Pinpoints which skill prompt produced unexpected behavior.
+- **Relevant instruction or excerpt:** The exact passage in `SKILL.md` or `references/*.md` that misled the agent.
+- **Target project context:** Language, build tool, package manager, and OS where the issue occurred.
+- **Failure explanation:** What the agent did when following the guidance (e.g. insisted on npm in a Go/Maven repo).
+- **Workaround:** How the human/agent got unblocked (crucial for prompt tuning).
+
+### 2. Markdown Reference Links Integrity Gate
+
+In agent skills, documentation *is* code. A broken relative link inside `SKILL.md` to `references/*.md` causes agent tool calls (`read_file`) to fail, throwing the agent into an unrecoverable error loop.
+
+- Provide `.github/scripts/validate_reference_links.py` to statically verify all relative Markdown links across `skills/` and `docs/`.
+- Wire into the CI `code-quality` tier to block broken documentation links before merge.
+
+### 3. Plugin Manifest Validation & Hermetic Install Smoke Test
+
+Agent plugins must be validated using the host ecosystem's native CLI tools:
+
+- **Manifest Lint:** Run `claude plugin validate .` to check marketplace and plugin manifest schemas, permissions, and metadata.
+- **Hermetic Install Smoke Test:** In CI, register a local marketplace (`claude plugin marketplace add ./`) and execute a test install (`claude plugin install <plugin> --scope user`) to prove the bundle installs cleanly without schema or network errors.

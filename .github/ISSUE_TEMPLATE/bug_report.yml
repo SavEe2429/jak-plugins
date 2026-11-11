@@ -1,12 +1,14 @@
-name: Bug Report
-description: Report a bug in a skill, prompt/command adapter, helper script, or plugin manifest.
+name: Bug Report (Code / Runtime Failure)
+description: Report crashes, Python exceptions, CLI errors, syntax issues, or plugin manifest failures.
 title: "[Bug]: "
 labels: ["bug", "triage"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thank you for reporting an issue in **jak-plugins**. Please provide clear details so we can reproduce and fix it promptly.
+        Use this form to report **technical bugs, crashes, Python exceptions, CLI script errors, or manifest syntax issues** in **jak-plugins**.
+
+        > **Looking for AI prompt / guidance issues?** If the scripts ran without crashing but the AI agent gave **incorrect, outdated, hallucinated, or stack-mismatched guidance**, please submit a [Skill Gap Report](https://github.com/SavEe2429/jak-plugins/issues/new?template=skill_gap.yml) instead.
 
   - type: dropdown
     id: component

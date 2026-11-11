@@ -23,7 +23,7 @@ This directory defines automated Continuous Integration and Release pipelines fo
 ## Local Verification Commands
 
 ```bash
-python3 .github/scripts/release/release_ops.py check-manifests
+python3 .github/scripts/release_manager.py check-manifests
 python3 -B skills/project-scaffolder/scripts/scaffold.py --help
-python3 .github/scripts/release/release_ops.py build-archive 1.0.0 --out-dir dist
+python3 .github/scripts/release_manager.py build-archive 1.0.0 --out-dir dist
 ```

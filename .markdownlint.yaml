@@ -10,6 +10,10 @@ MD033:
     - details
     - summary
 
+# Allow duplicate headings across different sections (e.g. Keep a Changelog ### Added).
+MD024:
+  siblings_only: true
+
 # Prompt fragments and PR templates do not always begin with a top-level heading.
 MD041: false
 
