@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Gitleaks capability provider (`providers/standards/gitleaks.json`) defining `.gitleaks.toml` configuration, pre-commit hook, and CI workflow standards.
+- Gitleaks binary allowlist support and subcommand validation (`detect`, `protect`, `version`) in `scripts/core/safe_executor.py`.
+- Concrete `.gitleaks.toml`, Pre-commit hook, and GitHub Actions workflow templates in `project-scaffolder/references/enterprise-standards.md`.
 - Architecture Reference pattern for AI Agent and Model Context Protocol (MCP) services in `project-scaffolder/references/architecture-catalog.md` (covering Stdio transport purity, graceful shutdown lifecycles, path confinement guards, deterministic Pydantic/Zod schemas, and canonical server layouts).
 - Multi-purpose binary subcommand inspection in `scripts/core/safe_executor.py` blocking arbitrary code execution or mutable operations via `git` (`push`, `clone`, `-c`, `-C`), `npm`/`pnpm`/`yarn` (`exec`, `publish`), `cargo` (`install`, `publish`), and `make` (`-e`, `--eval`).
 - Regression and unit tests for command security, working directory boundary enforcement, and dangerous subcommand rejection.

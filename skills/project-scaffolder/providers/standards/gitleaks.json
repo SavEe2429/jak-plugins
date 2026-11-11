@@ -1,0 +1,48 @@
+{
+  "id": "standards.gitleaks",
+  "kind": "standards",
+  "schema_version": 1,
+  "capabilities": [
+    "standard-metadata",
+    "secret-detection",
+    "existing-rule-detection"
+  ],
+  "matches": [
+    {
+      "path": ".gitleaks.toml",
+      "weight": 5
+    },
+    {
+      "path": ".pre-commit-config.yaml",
+      "contains": "gitleaks",
+      "weight": 4
+    }
+  ],
+  "payload": {
+    "name": "Gitleaks Secret Scanner",
+    "classification": "team-convention",
+    "source": {
+      "type": "repository-config",
+      "path": ".gitleaks.toml"
+    },
+    "scope": [
+      "git-history",
+      "staged-files",
+      "pull-requests"
+    ],
+    "applicability": "enterprise-security-standard",
+    "requirement": "recommended",
+    "conflicts": [],
+    "dependencies": [],
+    "enforcement": {
+      "configuration": ".gitleaks.toml",
+      "pre_commit_hook": "gitleaks/gitleaks",
+      "ci_workflow": ".github/workflows/gitleaks.yml"
+    },
+    "verification": {
+      "kind": "static-inspection",
+      "claim": "rule-declared"
+    },
+    "last_reviewed": "2026-11-11"
+  }
+}

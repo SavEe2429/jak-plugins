@@ -30,7 +30,7 @@ SAFE_BINARY_WHITELIST: Set[str] = {
     "node", "npm", "pnpm", "yarn", "deno", "bun", "govulncheck", "ruff",
     "clippy", "gofmt", "rustfmt", "eslint", "prettier", "pre-commit",
     "unity", "unity.exe", "godot", "godot.exe", "dotnet", "platformio",
-    "pio", "idf.py", "git",
+    "pio", "idf.py", "git", "gitleaks",
 }
 
 # Interpreter entry points are intentionally narrower than the executable allowlist.
@@ -154,6 +154,11 @@ class RestrictedExecutor:
         if name == "make":
             if any(arg in {"-e", "--environment-overrides", "--eval"} or arg.startswith("--eval=") for arg in args):
                 return "Make environment overrides and eval flags are blocked by security policy."
+            return None
+        if name == "gitleaks":
+            subcmd = next((arg for arg in args if not arg.startswith("-")), None)
+            if subcmd is not None and subcmd.lower() not in {"detect", "protect", "version"}:
+                return f"Gitleaks subcommand '{subcmd}' is blocked by security policy; permitted subcommands are detect, protect, version."
             return None
         return None
 

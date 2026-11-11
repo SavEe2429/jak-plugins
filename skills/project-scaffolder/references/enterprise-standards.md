@@ -92,8 +92,58 @@ Protect the repository against malicious dependencies, credentials leakage, and 
 2. **`.github/dependabot.yml`:**
    - Schedules automated weekly vulnerability scans and dependency version bumps for package manifests and GitHub Actions workflows with cooldown periods (e.g. 7 days).
 3. **Secret Leak Prevention (`.gitleaks.toml` & TruffleHog):**
-   - Configures pre-commit and CI scans with Gitleaks / detect-private-key.
-   - For CI secret verification, use TruffleHog OSS (`trufflesecurity/trufflehog`) with `fetch-depth: 0` and `--results=verified` to eliminate noisy unverified false positives.
+   - Configures pre-commit and CI scans with Gitleaks (`gitleaks/gitleaks`) and `detect-private-key`.
+   - **Repository Configuration (`.gitleaks.toml`):**
+
+     ```toml
+     # .gitleaks.toml - Repository Secret Scanning Policy
+     [extend]
+     useDefault = true
+
+     [allowlist]
+     description = "Global allowlisted paths and dummy test credentials"
+     paths = [
+       '''^\.git''',
+       '''^tests/fixtures''',
+       '''^(\.agents/)?skills-dev''',
+     ]
+     regexes = [
+       '''(?i)example[_-]?secret''',
+       '''(?i)dummy[_-]?token''',
+     ]
+     ```
+
+   - **Pre-commit Hook Integration (`.pre-commit-config.yaml`):**
+
+     ```yaml
+     - repo: https://github.com/gitleaks/gitleaks
+       rev: v8.24.0
+       hooks:
+         - id: gitleaks
+     ```
+
+   - **GitHub Actions Workflow (`.github/workflows/gitleaks.yml`):**
+
+     ```yaml
+     name: Gitleaks Secret Scan
+     on:
+       push:
+         branches: [main]
+       pull_request:
+
+     jobs:
+       gitleaks:
+         runs-on: ubuntu-latest
+         steps:
+           - uses: actions/checkout@v4
+             with:
+               fetch-depth: 0
+           - uses: gitleaks/gitleaks-action@v2
+             env:
+               GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+     ```
+
+   - For secondary CI secret verification, pair with TruffleHog OSS (`trufflesecurity/trufflehog`) with `fetch-depth: 0` and `--results=verified` to eliminate noisy unverified false positives.
 4. **GitHub Actions Workflow Static Security Analysis (`.github/workflows/zizmor.yml`):**
    - Runs `zizmorcore/zizmor-action` on PRs and main pushes to statically analyze GitHub Actions workflows for token leaks, code injection vulnerabilities, unpinned third-party actions, and permission escalation risks.
 5. **Scheduled Vulnerability Drift Detection (`.github/workflows/osv-scanner.yml`):**
