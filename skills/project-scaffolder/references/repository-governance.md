@@ -56,16 +56,20 @@ Continuous Integration is organized into 4 standardized tiers plus an aggregated
 4. **Dynamic LTS / Latest Stable Version Policy & Full-SHA Pinning:**
    - Never rely on memorized or hardcoded version numbers for runtimes, dependencies, pre-commit hooks, or GitHub Actions. Always resolve active **LTS** or **Latest Stable** versions.
    - **Full-SHA Action Pinning:** In production repositories, pin third-party GitHub Actions to immutable full commit SHAs with a trailing human-readable SemVer comment (e.g. `uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1`), complying with OpenSSF Scorecard and SLSA Level 3 supply-chain standards.
-5. **Zero-Trust Token Permissions & Hygiene:**
+5. **Official Actions Only & Zero Third-Party Actions Policy:**
+   - All workflow steps must strictly use **Official Actions** (GitHub Official `actions/*` such as `actions/checkout`, `actions/setup-python`, `actions/setup-node`, `actions/setup-go`, `actions/upload-artifact`, `actions/download-artifact`, `actions/github-script`, `actions/cache`, or verified vendor actions such as `astral-sh/setup-uv`, `docker/setup-buildx-action`).
+   - Untrusted third-party or community actions (e.g. `softprops/action-gh-release`) are strictly forbidden to eliminate supply chain vulnerabilities.
+   - When an official action is unavailable for a task (such as creating GitHub releases), use the official native CLI (e.g. `gh release create`) directly within a standard `run:` step.
+6. **Zero-Trust Token Permissions & Hygiene:**
    - Set top-level `permissions: {}` at the root of every workflow to disable default write tokens.
    - Declare minimal, least-privilege permissions per job (e.g. `contents: read`, `pull-requests: read`).
    - Use `persist-credentials: false` in `actions/checkout` so tokens are not retained in the runner's local Git configuration.
-6. **Cross-Platform Verification & Subprocess Isolation:**
+7. **Cross-Platform Verification & Subprocess Isolation:**
    - When project code executes external processes, handles OS signals, or manages filesystem paths, include a dedicated `windows-latest` or matrix job (e.g. `windows-process-tree`) to verify process tree termination and signal handling parity across POSIX and Windows.
-7. **Multi-Job DAG Architecture (`code-quality`, `test`, `build`, `summary`):**
+8. **Multi-Job DAG Architecture (`code-quality`, `test`, `build`, `summary`):**
    - Separate CI into distinct jobs connected via `needs:` so `code-quality` and `test` run in parallel and `build` runs only after upstream checks pass (`needs: [code-quality, test]`).
    - The `build` job must execute the project's declared build/packaging command and configured mode (matching the Single Source of Truth in the repository's build script or manifest).
-8. **Dual-Audience `summary` Gate Job (`$GITHUB_STEP_SUMMARY` + `Enforce Overall Gate`):**
+9. **Dual-Audience `summary` Gate Job (`$GITHUB_STEP_SUMMARY` + `Enforce Overall Gate`):**
    - Always include a final `summary` job with `needs: [code-quality, test, build]` (or all active upstream jobs) and `if: always()` containing two distinct steps for two audiences:
      - **Step 1 — `Write Workflow Summary` (for Humans):** Appends a Markdown table of job results to `$GITHUB_STEP_SUMMARY` so developers and reviewers see a visual summary table on the GitHub Actions run page.
      - **Step 2 — `Enforce Overall Gate` (for GitHub Branch Protection / Machine Gate):** Because `if: always()` causes the `summary` job to execute even when an upstream job fails or is cancelled, explicitly verify that every upstream `needs.<job>.result == "success"` and execute `exit 1` otherwise. This allows branch protection rulesets to require a single `CI Summary & Gate` status check to block broken PR merges.

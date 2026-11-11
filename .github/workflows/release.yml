@@ -82,18 +82,15 @@ jobs:
           git push origin "${{ steps.semver.outputs.tag }}" --force
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ steps.semver.outputs.tag }}
-          name: "Release ${{ steps.semver.outputs.tag }}"
-          body_path: dist/RELEASE_BODY.md
-          files: |
-            dist/*.zip
-            dist/SHA256SUMS.txt
-          draft: false
-          prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.semver.outputs.tag }}" \
+            --title "Release ${{ steps.semver.outputs.tag }}" \
+            --notes-file dist/RELEASE_BODY.md \
+            --verify-tag \
+            dist/*.zip \
+            dist/SHA256SUMS.txt
 
       - name: Merge Release Updates Back to Default Branch
         if: startsWith(github.ref, 'refs/heads/release/')
