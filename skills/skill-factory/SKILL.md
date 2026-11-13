@@ -11,7 +11,7 @@ description: >-
   Core/Supporting Capabilities, Resource recommendations, and evidence statuses.
   Does not design or scaffold repository directories, manifests, or project source trees.
 metadata:
-  version: "4.14.0"
+  version: "4.15.0"
 allowed-tools:
   - "Bash(python scripts/*)"
   - "Bash(uv run python .agents/skills/skill-factory/scripts/*)"
@@ -73,7 +73,9 @@ destination out of scope.
 - [ ] **External-First Resource Discovery**: Follow the sequence External Resource Discovery → External Resource Evaluation → Internal Resource Discovery → Comparative Evaluation → Final Recommendation. Search broadly across relevant Agent Skills, MCP Servers, and Plugins before inspecting installed Resources; do not give internal or external candidates automatic preference.
 - [ ] **Retain Every Qualifying Candidate**: Keep every candidate that passes the relevance, verification, and trust thresholds. A Top 3 may be used only as a concise shortlist or summary and must never cap discovery or exclude another qualifying candidate.
 - [ ] **The 3-Repetition Rule for Custom Synthesis**: Do not create or synthesize a custom skill from scratch unless the workflow has been repeated at least 3 times (≥ 3 repetitions), or the user explicitly approves custom synthesis after reviewing the available external and internal options.
-- [ ] **Decision-Based Human-in-the-Loop (HIL)**: Do not add a separate approval gate after every analysis phase. Ask clarifying questions when decisions or material ambiguities arise; obtain explicit approval before installing, connecting, activating, granting permissions, or synthesizing a custom skill.
+- [ ] **Decision-Based Human-in-the-Loop (HIL) & Installation Scope Selection**: Do not add a separate approval gate after every analysis phase. Ask clarifying questions when decisions or material ambiguities arise; obtain explicit approval before installing, connecting, activating, granting permissions, or synthesizing a custom skill. Whenever proposing to load, install, fetch, or synthesize a skill (or configure a plugin/MCP), explicitly let the user choose between the two installation scopes unless they already specified one:
+  1. **Project / Workspace Scope (`--scope project` / `workspace`)** — installed inside the active repository (e.g. `.agents/skills/`, `.claude/skills/`, `.gemini/skills/`, `.cursor/skills/`) for project-specific workflows or team version-control sharing (takes precedence over user-level skills on name collisions).
+  2. **User / Global Scope (`--scope user` / `global`)** — installed in the user's home configuration (e.g. `~/.gemini/skills/`, `~/.agents/skills/`, `~/.claude/skills/`) so the skill is reusable across all projects on the machine.
 - [ ] Adapt to the project domain, lifecycle stage, deliverable, risk, team,
       platform, and existing conventions. Hybrid projects can use more than one
       domain profile.
@@ -315,7 +317,9 @@ activation or approval.
 Summarize the task profile, evidence, all qualifying external and internal
 candidates, repetition count (≥ 3 check), trust or permission concerns, and verification
 performed. Always pause for **Human-in-the-Loop (HIL)** confirmation before
-installing an external skill or synthesizing a new custom skill. Use `- [ ]`
+installing an external skill or synthesizing a new custom skill, and ask the user
+to select the **Installation Scope** (`project`/`workspace` vs `user`/`global`) if
+not yet chosen. Use `- [ ]`
 checkboxes for actionable checklists. For project-wide matrices, always show every row and column in full; do not
 pad cells with tools that are not needed, and do not add a readiness score
 unless asked.
@@ -324,14 +328,14 @@ unless asked.
 
 Deterministic helper scripts in `scripts/`:
 
-- `scripts/scaffold_skill.py`: Universal lifecycle orchestrator (`--match`, `--scan`, `--compose`, `--synthesize`).
+- `scripts/scaffold_skill.py`: Universal lifecycle orchestrator (`--match`, `--scan`, `--compose`, `--synthesize`, `--scope <project|user>`).
 - `scripts/skill_synthesizer.py`: Staged skill synthesis with atomic directory replacement and backup-preserving rollback on restore failure; no absolute zero-data-loss guarantee is claimed.
 - `scripts/deduplication_engine.py`: 4-Gate Anti-Sprawl engine (Semantic Overlap, Entity Ownership, Complexity/ROI, Negative Boundaries).
 - `scripts/security_scanner.py`: AST data-flow threat scanner, source-to-sink credential tracking, syntax error detection, declared-tool inspection, and explicit excluded-file coverage reporting. It cannot prove host/runtime permission enforcement.
 - `scripts/capability_matcher.py`: Context-aware capability resolution and negative context matching.
-- `scripts/agent_adapter.py`: Multi-agent environment ports & adapters (Gemini, Codex, Claude Code, Cursor, Copilot, Local).
+- `scripts/agent_adapter.py`: Multi-agent environment ports & adapters (Gemini, Codex, Claude Code, Cursor, Copilot, Local) with 2-level installation scope resolution (`project`/`workspace` and `user`/`global`).
 - `scripts/capability_composer.py`: Capability contract modeling & continuous workflow DAG composition.
-- `scripts/skill_fetcher.py`: Fetches only one requested skill directory pinned to an immutable commit SHA. Before downloading any skill files, it asks GitHub for the repository license at the exact pinned commit and permits only the approved permissive SPDX allowlist (MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD, Zlib, BSL-1.0, Unlicense); missing, unknown, or other licenses are blocked. Additional LICENSE/LICENCE/COPYING files governing the selected Skill subtree are fetched at that pinned commit, blob-verified, and accepted only when they contain exactly one approved SPDX identifier; otherwise the fetch is blocked. It never reads `GITHUB_TOKEN`. Requests are HTTPS-only and restricted to `api.github.com` and `raw.githubusercontent.com`, including redirects; repository identifiers are validated before URL construction. Each file is checked against GitHub's pinned tree blob SHA-1, staged, scanned, and installed only when CLEAN (unless `--accept-findings`). `--verify <skill>` checks local files and pinned upstream provenance. Always get HIL approval before installing without `--dry-run`.
+- `scripts/skill_fetcher.py`: Fetches only one requested skill directory pinned to an immutable commit SHA (supports `--scope <project|user>` and `--agent <gemini|claude|codex|cursor|copilot|local>` to target project-level or user-level skill directories, or `--target-dir` for an explicit path). Before downloading any skill files, it asks GitHub for the repository license at the exact pinned commit and permits only the approved permissive SPDX allowlist (MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD, Zlib, BSL-1.0, Unlicense); missing, unknown, or other licenses are blocked. Additional LICENSE/LICENCE/COPYING files governing the selected Skill subtree are fetched at that pinned commit, blob-verified, and accepted only when they contain exactly one approved SPDX identifier; otherwise the fetch is blocked. It never reads `GITHUB_TOKEN`. Requests are HTTPS-only and restricted to `api.github.com` and `raw.githubusercontent.com`, including redirects; repository identifiers are validated before URL construction. Each file is checked against GitHub's pinned tree blob SHA-1, staged, scanned, and installed only when CLEAN (unless `--accept-findings`). `--verify <skill>` checks local files and pinned upstream provenance. Always get HIL approval before installing without `--dry-run`.
 
 Repository-maintainer evaluations, regression tests, and the release gate are kept outside the installable package; they are development-only assets, not runtime components.
 

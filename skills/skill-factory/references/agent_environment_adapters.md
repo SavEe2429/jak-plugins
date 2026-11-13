@@ -20,17 +20,26 @@ Gemini's `.agents/skills/` path is the preferred shared workspace location; the 
 
 ---
 
-## Runtime identity
+## Runtime identity & Installation Scopes (`project` vs `user`)
 
-The CLI does not infer the active host from installed executables or passive workspace files. Pass the runtime identity explicitly with `--agent` (or `--active-agent`). For example:
+The CLI does not infer the active host from installed executables or passive workspace files. Pass the runtime identity explicitly with `--agent` (or `--active-agent`) and choose the target installation scope with `--scope`:
+
+- **Project / Workspace Scope (`--scope project` or `--scope workspace`):** Installs into the repository-local skills directory (e.g. `.agents/skills/`, `.claude/skills/`, `.cursor/skills/`, `.github/skills/`). Ideal for project-specific workflows or team version-control sharing.
+- **User / Global Scope (`--scope user` or `--scope global`):** Installs into the user's home configuration directory (e.g. `~/.gemini/skills/`, `~/.agents/skills/`, `~/.claude/skills/`, `~/.cursor/skills/`). Ideal for reusable personal skills across all projects on the machine.
+
+For example:
 
 ```bash
-python scripts/scaffold_skill.py --agent gemini --synthesize --name example --desc "Example workflow" --dry-run
-python scripts/scaffold_skill.py --agent claude --synthesize --name example --desc "Example workflow" --dry-run
-python scripts/scaffold_skill.py --agent codex --synthesize --name example --desc "Example workflow" --dry-run
+# Project-level (workspace) synthesis or fetch
+python scripts/scaffold_skill.py --agent gemini --scope project --synthesize --name example --desc "Example workflow" --dry-run
+python scripts/skill_fetcher.py --repo owner/repo --skill example --agent claude --scope project --dry-run
+
+# User-level (global) synthesis or fetch
+python scripts/scaffold_skill.py --agent gemini --scope user --synthesize --name example --desc "Example workflow" --dry-run
+python scripts/skill_fetcher.py --repo owner/repo --skill example --agent codex --scope user --dry-run
 ```
 
-If no identity is supplied, installation target selection uses the local fallback adapter. Use `--skills-dir` to explicitly override the install and discovery directory.
+If no identity is supplied, installation target selection uses the local fallback adapter (`.agents/skills/` for `project`/`workspace`, or `~/.agents/skills/` for `user`/`global`). Use `--skills-dir` (or `--target-dir` in `skill_fetcher.py`) to explicitly override the install and discovery directory.
 
 ---
 

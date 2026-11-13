@@ -27,7 +27,7 @@
 - Verify each candidate's identity, source, actual capability, maintenance, permissions, security, compatibility, and evidence using the multidimensional trust rubric.
 - Retain every candidate that passes the relevance and trust thresholds; a Top 3 may be a concise presentation shortlist only and must not cap discovery or discard other qualifying candidates.
 - Do not install, execute, connect, activate, or grant permissions during discovery/evaluation.
-- **Human-in-the-Loop (HIL) Checkpoint**: Ask for approval before installing, connecting, activating, or granting permissions to any Resource.
+- **Human-in-the-Loop (HIL) Checkpoint**: Ask for approval and let the user select the target installation scope (**Project/Workspace** via `--scope project` vs **User/Global** via `--scope user`) before installing, fetching, connecting, activating, or granting permissions to any Resource.
 
 ### 3. Discover Internal Resources
 
@@ -53,7 +53,7 @@
 - Execute repository-maintainer unit and evaluation benchmarks from `tests/skill_factory/`; these development assets are not shipped with the installable skill.
 - Enforce `SKILL.md` (`metadata.version`) as the Single Source of Truth (SSOT) for skill versioning; never duplicate version numbers in scripts, `evals.json`, or references, and automatically bump `metadata.version` in `SKILL.md` whenever an existing skill is updated.
 - Rollback cleanly if vulnerabilities or AST violations are detected without touching target directory.
-- **Human-in-the-Loop (HIL)**: Request explicit user approval prior to final skill activation.
+- **Human-in-the-Loop (HIL)**: Request explicit user approval and confirm installation scope (`project`/`workspace` vs `user`/`global`) prior to final skill synthesis or activation.
 
 ### 6. Retire / Consolidate
 

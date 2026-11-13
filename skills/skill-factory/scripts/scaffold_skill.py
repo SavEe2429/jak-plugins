@@ -461,6 +461,12 @@ def main():
     )
     parser.add_argument("--skills-dir", help="Explicit override for skills directory")
     parser.add_argument(
+        "--scope",
+        choices=("project", "workspace", "user", "global"),
+        default="project",
+        help="Target installation scope: 'project'/'workspace' (project-level) or 'user'/'global' (user-level)",
+    )
+    parser.add_argument(
         "--capabilities-file",
         help="JSON input containing specific Core/Supporting capability records",
     )
@@ -594,9 +600,9 @@ def main():
             sys.exit(1)
 
         # --target-dir selects the workspace root; the active adapter chooses
-        # its native install directory. --skills-dir remains the explicit
-        # destination override and is handled by AgentEnvironmentAdapter.
-        target_install_dir = adapter.resolve_target_install_directory("workspace")
+        # its native install directory for the requested --scope ('project'/'workspace'
+        # or 'user'/'global'). --skills-dir remains the explicit destination override.
+        target_install_dir = adapter.resolve_target_install_directory(args.scope)
         if (
             args.name == "skill-factory"
             or (target_install_dir / args.name).resolve() == SCRIPT_DIR.parent.resolve()

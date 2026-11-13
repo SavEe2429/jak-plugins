@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Two-level installation scope selection (`--scope project|workspace|user|global`) in `skill-factory` (`v4.15.0`) across `SKILL.md`, `agent_adapter.py`, `scaffold_skill.py`, and `skill_fetcher.py`, allowing users to choose between Project-level (`.agents/skills/`, `.claude/skills/`, etc.) and User-level (`~/.gemini/skills/`, `~/.agents/skills/`, `~/.claude/skills/`, etc.) skill loading/installation.
+
+### Changed
+
+- Bumped bundled `skill-factory` skill from `v4.14.0` to `v4.15.0`.
+
 ## [1.1.0] - 2026-11-11
 
 ### Added

@@ -685,13 +685,43 @@ def _print_verify(res: Dict[str, Any]) -> None:
     print("=" * 78)
 
 
+def resolve_fetch_target_dir(
+    target_dir: Optional[str],
+    scope: str = "project",
+    active_agent: Optional[str] = None,
+    workspace: str = ".",
+) -> Path:
+    """Resolve destination skills directory from explicit --target-dir or --scope + --agent."""
+    if target_dir is not None:
+        return Path(target_dir)
+    if active_agent is None and scope in ("project", "workspace") and workspace == ".":
+        return Path(".agents/skills")
+    from agent_adapter import AgentEnvironmentAdapter
+
+    adapter = AgentEnvironmentAdapter(Path(workspace).resolve(), active_agent=active_agent)
+    return adapter.resolve_target_install_directory(scope)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     parser.add_argument("--repo", "-r", help="GitHub repository owner/name (e.g. mattpocock/skills)")
     parser.add_argument("--skill", "-s", help="Skill directory name to fetch (e.g. tdd)")
     parser.add_argument("--path", help="Exact skill directory path in the repo (disambiguates duplicates)")
     parser.add_argument("--ref", default="HEAD", help="Branch, tag, or commit to pin (default: default branch)")
-    parser.add_argument("--target-dir", "-t", default=".agents/skills", help="Skills directory")
+    parser.add_argument("--target-dir", "-t", default=None, help="Explicit skills destination directory override")
+    parser.add_argument(
+        "--scope",
+        choices=("project", "workspace", "user", "global"),
+        default="project",
+        help="Target installation scope: 'project'/'workspace' (project-level) or 'user'/'global' (user-level)",
+    )
+    parser.add_argument(
+        "--agent", "--active-agent", dest="active_agent",
+        choices=("gemini", "claude", "codex", "cursor", "copilot", "local"),
+        default=None,
+        help="Explicit active agent runtime identity used with --scope to resolve the skills directory",
+    )
+    parser.add_argument("--workspace", default=".", help="Workspace root directory when resolving project scope")
     parser.add_argument("--dry-run", action="store_true", help="Download, verify, and scan without installing")
     parser.add_argument("--force", action="store_true", help="Replace an existing install (keeps a backup)")
     parser.add_argument("--accept-findings", action="store_true", help="Install even if the scan is not CLEAN")
@@ -702,10 +732,13 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
+        resolved_target_dir = resolve_fetch_target_dir(
+            args.target_dir, scope=args.scope, active_agent=args.active_agent, workspace=args.workspace
+        )
         if args.verify:
             skill_dir = Path(args.verify)
             if not skill_dir.is_dir():
-                skill_dir = Path(args.target_dir) / args.verify
+                skill_dir = resolved_target_dir / args.verify
             res = verify_installed_skill(skill_dir, offline=args.offline,
                                          check_upstream=not args.no_upstream_check)
             print(json.dumps(res, indent=2)) if args.json else _print_verify(res)
@@ -713,7 +746,7 @@ def main() -> int:
 
         if not args.repo or not args.skill:
             parser.error("--repo and --skill are required (or use --verify)")
-        res = fetch_skill(args.repo, args.skill, Path(args.target_dir), ref=args.ref,
+        res = fetch_skill(args.repo, args.skill, resolved_target_dir, ref=args.ref,
                           explicit_path=args.path, dry_run=args.dry_run, force=args.force,
                           accept_findings=args.accept_findings)
         print(json.dumps(res, indent=2, default=str)) if args.json else _print_fetch(res)

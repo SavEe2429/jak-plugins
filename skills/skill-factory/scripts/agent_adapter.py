@@ -28,6 +28,29 @@ if sys.platform == "win32":
     except Exception:
         pass
 
+VALID_INSTALL_SCOPES = frozenset({"project", "workspace", "user", "global"})
+
+
+def normalize_install_scope(scope: str = "workspace") -> str:
+    """
+    Normalize installation scope aliases into canonical adapter scopes:
+    - 'project' / 'workspace' -> 'workspace' (project-level directory)
+    - 'user' / 'global'       -> 'global'    (user-level home directory)
+    """
+    if not isinstance(scope, str):
+        raise ValueError(
+            "Installation scope must be a string ('project'/'workspace' or 'user'/'global')."
+        )
+    cleaned = scope.strip().lower()
+    if cleaned in ("project", "workspace"):
+        return "workspace"
+    if cleaned in ("user", "global"):
+        return "global"
+    raise ValueError(
+        f"Unsupported installation scope: {scope!r}. Expected 'project'/'workspace' or 'user'/'global'."
+    )
+
+
 
 class AgentEnvironmentPort(abc.ABC):
     """Abstract port defining the interface for all AI Agent runtime adapters."""
@@ -137,7 +160,7 @@ class GeminiAntigravityAdapter(AgentEnvironmentPort):
         return [path for path in candidates if path.is_dir()]
 
     def resolve_install_path(self, workspace: Path, scope: str = "workspace") -> Path:
-        if scope == "global":
+        if normalize_install_scope(scope) == "global":
             return Path.home() / ".gemini" / "skills"
         return workspace / ".agents" / "skills"
 
@@ -187,7 +210,7 @@ class OpenAICodexAdapter(AgentEnvironmentPort):
         return [path for path in candidates if path.is_dir()]
 
     def resolve_install_path(self, workspace: Path, scope: str = "workspace") -> Path:
-        if scope == "global":
+        if normalize_install_scope(scope) == "global":
             return Path.home() / ".agents" / "skills"
         return workspace / ".agents" / "skills"
 
@@ -238,7 +261,7 @@ class ClaudeCodeAdapter(AgentEnvironmentPort):
         return [path for path in candidates if path.is_dir()]
 
     def resolve_install_path(self, workspace: Path, scope: str = "workspace") -> Path:
-        if scope == "global":
+        if normalize_install_scope(scope) == "global":
             return Path.home() / ".claude" / "skills"
         return workspace / ".claude" / "skills"
 
@@ -307,6 +330,8 @@ class CursorAdapter(AgentEnvironmentPort):
         return paths
 
     def resolve_install_path(self, workspace: Path, scope: str = "workspace") -> Path:
+        if normalize_install_scope(scope) == "global":
+            return Path.home() / ".cursor" / "skills"
         return workspace / ".cursor" / "skills"
 
     def get_permission_model(self) -> Dict[str, Any]:
@@ -367,6 +392,8 @@ class GitHubCopilotAdapter(AgentEnvironmentPort):
         return paths
 
     def resolve_install_path(self, workspace: Path, scope: str = "workspace") -> Path:
+        if normalize_install_scope(scope) == "global":
+            return Path.home() / ".agents" / "skills"
         return workspace / ".github" / "skills"
 
     def get_permission_model(self) -> Dict[str, Any]:
@@ -415,6 +442,8 @@ class LocalWorkspaceAdapter(AgentEnvironmentPort):
         return paths
 
     def resolve_install_path(self, workspace: Path, scope: str = "workspace") -> Path:
+        if normalize_install_scope(scope) == "global":
+            return Path.home() / ".agents" / "skills"
         return workspace / ".agents" / "skills"
 
     def get_permission_model(self) -> Dict[str, Any]:
@@ -533,7 +562,8 @@ class AgentEnvironmentAdapter:
         return roots
 
     def resolve_target_install_directory(self, install_scope: str = "workspace") -> Path:
-        """Determines target directory for new skills based on active adapter."""
+        """Determines target directory for new skills based on active adapter and scope ('project'/'workspace' or 'user'/'global')."""
+        normalized_scope = normalize_install_scope(install_scope)
         if self.custom_skills_dir:
             return self.custom_skills_dir
 
@@ -550,7 +580,7 @@ class AgentEnvironmentAdapter:
         if not target_adapter:
             target_adapter = next(a for a in self.adapters if a.agent_id == "local")
 
-        return target_adapter.resolve_install_path(self.workspace, install_scope)
+        return target_adapter.resolve_install_path(self.workspace, normalized_scope)
 
 
 def main():
