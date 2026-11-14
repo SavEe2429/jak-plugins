@@ -134,6 +134,7 @@ UNIVERSAL_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         "description": "Automated test suites, unit testing, integration tests, regression checks, assertion validation, and linters.",
         "keywords": [
             "test",
+            "tests",
             "run tests",
             "unit test",
             "integration test",
@@ -146,6 +147,12 @@ UNIVERSAL_CAPABILITIES: Dict[str, Dict[str, Any]] = {
             "validation suite",
             "test fixture",
             "spec test",
+            "playwright",
+            "e2e",
+            "pytest",
+            "unittest",
+            "vitest",
+            "cypress",
         ],
         "builtin_tool": "Standard test runners and verification harnesses",
     },
@@ -439,13 +446,17 @@ def classify_domain_class(task_context: str, repo_path: Optional[Path] = None) -
     'unknown' means the task carries too little signal to decide; it must never be
     silently treated as software (or as non-software).
     """
-    profile = ContextAwareCapabilityResolver(task_context).classify_context_profile()
+    resolver = ContextAwareCapabilityResolver(task_context)
+    profile = resolver.classify_context_profile()
     intent = profile["intent"]
     if intent == "AMBIGUOUS_OR_UNSPECIFIED":
         return "unknown"
     if profile["is_software"]:
         return "software"
-    # Explicit software-authoring instruction overrides a non-software intent
+    # Explicit positive software-authoring instruction overrides a non-software intent.
+    # Evaluate positive_task so negated phrases like "do not write code" or
+    # "ไม่ต้องเขียนโค้ด" do not flip a non-software task back to "software".
+    positive_lower = resolver.positive_task.lower()
     code_words = [
         "write code",
         "implement api",
@@ -455,7 +466,7 @@ def classify_domain_class(task_context: str, repo_path: Optional[Path] = None) -
         "dockerfile",
         "\u0e40\u0e02\u0e35\u0e22\u0e19\u0e42\u0e04\u0e49\u0e14",
     ]
-    if any(w in task_context.lower() for w in code_words):
+    if any(w in positive_lower for w in code_words):
         return "software"
     return "non_software"
 
@@ -530,15 +541,36 @@ class ContextAwareCapabilityResolver:
     def _partition_negation(text: str) -> Tuple[str, List[str]]:
         """Separates negative clauses (e.g. 'do not run tests', 'ไม่ต้องรันเทสต์') from positive task text."""
         neg_patterns = [
-            r"(?:do not|don't|never|without)\s+([^,.;\n]+)",
-            r"(?:\u0e44\u0e21\u0e48\u0e15\u0e49\u0e2d\u0e07|\u0e2b\u0e49\u0e32\u0e21|\u0e42\u0e14\u0e22\u0e44\u0e21\u0e48\u0e15\u0e49\u0e2d\u0e07)\s*([^,.;\n]+)",
+            r"\b(?:do not|don't|never|without|no need to)\s+([^,.;\n]+)",
+            r"(?:\u0e42\u0e14\u0e22\u0e44\u0e21\u0e48\u0e15\u0e49\u0e2d\u0e07|\u0e42\u0e14\u0e22\u0e44\u0e21\u0e48|\u0e44\u0e21\u0e48\u0e15\u0e49\u0e2d\u0e07\u0e01\u0e32\u0e23|\u0e44\u0e21\u0e48\u0e15\u0e49\u0e2d\u0e07|\u0e44\u0e21\u0e48\u0e44\u0e14\u0e49|\u0e2b\u0e49\u0e32\u0e21|\u0e44\u0e21\u0e48(?=\s*(?:\u0e40\u0e02\u0e35\u0e22\u0e19|\u0e23\u0e31\u0e19|\u0e17\u0e14\u0e2a\u0e2d\u0e1a|\u0e15\u0e23\u0e27\u0e08\u0e2a\u0e2d\u0e1a|\u0e2a\u0e23\u0e49\u0e32\u0e07|\u0e17\u0e33|\u0e43\u0e0a\u0e49)))\s*([^,.;\n]+)",
         ]
         neg_clauses: List[str] = []
-        pos_text = text
+        spans: List[Tuple[int, int]] = []
         for pat in neg_patterns:
             for m in re.finditer(pat, text, re.IGNORECASE):
-                neg_clauses.append(m.group(1).strip().lower())
-                pos_text = pos_text.replace(m.group(0), " ")
+                neg_clauses.append(m.group(1).strip(" ()[]").lower())
+                start, end = m.span()
+                if start > 0 and text[start - 1] == "(" and text[end - 1 : end] == ")":
+                    start -= 1
+                spans.append((start, end))
+        if not spans:
+            return text.strip(), neg_clauses
+        spans.sort()
+        merged: List[Tuple[int, int]] = [spans[0]]
+        for start, end in spans[1:]:
+            prev_start, prev_end = merged[-1]
+            if start <= prev_end:
+                merged[-1] = (prev_start, max(prev_end, end))
+            else:
+                merged.append((start, end))
+        parts: List[str] = []
+        cursor = 0
+        for start, end in merged:
+            parts.append(text[cursor:start])
+            parts.append(" ")
+            cursor = end
+        parts.append(text[cursor:])
+        pos_text = re.sub(r"\s+", " ", "".join(parts))
         return pos_text.strip(), neg_clauses
 
     def classify_context_profile(self) -> Dict[str, Any]:
@@ -1511,8 +1543,24 @@ class ContextAwareCapabilityResolver:
         # 4. Negative clause disqualification (e.g., 'do not run tests' -> disqualify 'validation')
         if self.negative_clauses:
             neg_joined = " ".join(self.negative_clauses)
+            extra_neg_kws = {
+                "validation": [
+                    "test",
+                    "tests",
+                    "testing",
+                    "\u0e40\u0e17\u0e2a",
+                    "\u0e40\u0e17\u0e2a\u0e15\u0e4c",
+                    "\u0e23\u0e31\u0e19\u0e40\u0e17\u0e2a",
+                    "\u0e23\u0e31\u0e19\u0e40\u0e17\u0e2a\u0e15\u0e4c",
+                    "\u0e17\u0e14\u0e2a\u0e2d\u0e1a",
+                ],
+                "creation": [
+                    "\u0e40\u0e02\u0e35\u0e22\u0e19\u0e42\u0e04\u0e49\u0e14",
+                    "\u0e40\u0e02\u0e35\u0e22\u0e19\u0e42\u0e1b\u0e23\u0e41\u0e01\u0e23\u0e21",
+                ],
+            }
             for cap_id, cap_info in UNIVERSAL_CAPABILITIES.items():
-                extra_kws = ["test", "tests", "testing", "\u0e40\u0e17\u0e2a\u0e15\u0e4c", "\u0e23\u0e31\u0e19\u0e40\u0e17\u0e2a\u0e15\u0e4c"] if cap_id == "validation" else []
+                extra_kws = extra_neg_kws.get(cap_id, [])
                 for kw in cap_info["keywords"] + extra_kws:
                     is_ascii = kw.isascii()
                     pat = (r"\b" + re.escape(kw) + r"\b") if (is_ascii and " " not in kw) else re.escape(kw)
@@ -1566,15 +1614,25 @@ class ContextAwareCapabilityResolver:
             if data["score"] >= 2:
                 data["classification"] = "REQUIRED"
                 data["confidence"] = "HIGH"
-                data["rationale"] = (
-                    f"Strong evidence from keywords: {', '.join(data['matched_keywords'])}"
-                )
+                if data["matched_keywords"]:
+                    data["rationale"] = (
+                        f"Strong evidence from keywords: {', '.join(data['matched_keywords'])}"
+                    )
+                elif not data["rationale"] or data["rationale"] == "Base keyword presence":
+                    data["rationale"] = (
+                        f"Strong domain signal for capability '{cap_id}'"
+                    )
             elif data["score"] == 1:
                 data["classification"] = "RECOMMENDED"
                 data["confidence"] = "MEDIUM"
-                data["rationale"] = (
-                    f"Supporting evidence from keyword: {data['matched_keywords'][0]}"
-                )
+                if data["matched_keywords"]:
+                    data["rationale"] = (
+                        f"Supporting evidence from keyword: {data['matched_keywords'][0]}"
+                    )
+                elif not data["rationale"] or data["rationale"] == "Base keyword presence":
+                    data["rationale"] = (
+                        f"Supporting domain signal for capability '{cap_id}'"
+                    )
 
         # Organize into final lists
         required = [c for c in scored_caps.values() if c["classification"] == "REQUIRED"]
@@ -1653,14 +1711,23 @@ def generate_agent_search_queries(
         terms = facet_search_terms.get(cid, [cid.replace("_", " ")])
         primary_term = terms[0]
         secondary_term = terms[1] if len(terms) > 1 else primary_term
+        term_clause = (
+            f'"{primary_term}"'
+            if secondary_term == primary_term
+            else f'"{primary_term}" OR "{secondary_term}"'
+        )
         track_a.append(
-            f'"{primary_term}" OR "{secondary_term}" ("SKILL.md" OR "agent skill" OR "Skills registry") site:github.com'
+            f'{term_clause} ("SKILL.md" OR "agent skill" OR "Skills registry") site:github.com'
         )
         track_c.append(
-            f'"{primary_term}" OR "{secondary_term}" ("mcp server" OR "modelcontextprotocol") site:github.com'
+            f'{term_clause} ("mcp server" OR "modelcontextprotocol") site:github.com'
         )
 
-    return {"track_a_agent_skills": track_a, "track_b_mcp_servers": track_b}
+    return {
+        "track_a_agent_skills": track_a,
+        "track_b_mcp_servers": track_c,
+        "track_b_supporting_skills": track_b,
+    }
 
 
 def match_capabilities_for_context(
@@ -1787,7 +1854,10 @@ def _matches_scope_exclusion(skill_name: str, exclusions: List[str]) -> bool:
         if not excluded_tokens:
             continue
         matched = all(
-            any(a == b or a.startswith(b[:7]) or b.startswith(a[:7]) for b in candidate_tokens)
+            any(
+                a == b or (len(a) >= 7 and len(b) >= 7 and a[:7] == b[:7])
+                for b in candidate_tokens
+            )
             for a in excluded_tokens
         )
         if matched:
@@ -2147,8 +2217,11 @@ def match_skill_candidates_to_capabilities(
             if _matches_scope_exclusion(skill_name, scope_exclusions):
                 continue
             searchable = f"{metadata['name'].replace('-', ' ')} {metadata['positive_text']}".casefold()
+            positive_text_lower = metadata["positive_text"].casefold()
             excluded = metadata["negative_text"].casefold()
-            if any(term in excluded for term in negative_terms + primary_terms):
+            if any(term in excluded for term in primary_terms) or any(
+                term in positive_text_lower or term in searchable for term in negative_terms
+            ):
                 continue
 
             direct_matches = [term for term in primary_terms if term in searchable]

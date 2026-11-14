@@ -166,7 +166,10 @@ def main():
             "package_manager": package_report,
             "ci_parity": analyze_ci_parity(target_path, selected)
             if selected
-            else {"status": "not-verified"},
+            else {
+                "status": "not-verified",
+                "reason": "No single software package manager was resolved for CI parity comparison.",
+            },
             "toolchains": toolchains,
             "toolchain_ci_parity": analyze_toolchain_ci_parity(target_path, toolchains),
             "standards": resolve_standards(target_path, capability_registry),
@@ -443,8 +446,11 @@ def main():
             sys.exit(2)
         context = ProjectContext(root=target_path, purpose="explicit provider composition")
         plan = compose_plan(context, providers, registry=capability_registry)
-        if plan.conflicts:
-            print("COMPOSITION BLOCKED: " + "; ".join(plan.conflicts))
+        if plan.conflicts or plan.unresolved:
+            reasons = list(plan.conflicts) + [
+                "Unresolved requirement: %s" % item for item in plan.unresolved
+            ]
+            print("COMPOSITION BLOCKED: " + "; ".join(reasons))
             sys.exit(2)
         if not args.dry_run and not args.confirm_plan:
             print(
@@ -544,6 +550,9 @@ def main():
         )
         print(
             "Then select an architecture and an available stack profile before running generation."
+        )
+        print(
+            "For non-software or custom-domain repositories, define explicit domain directories and acceptance criteria instead of guessing a software stack."
         )
         if args.domain or args.stack:
             print(f"No exact profile found for {domain}/{stack}.")

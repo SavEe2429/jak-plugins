@@ -396,7 +396,13 @@ This is the active append-only project session log. Follow [README.md](README.md
             elif "*" in pat:
                 matches = list(root.glob(pat))
                 if matches:
-                    return True, f"Found {len(matches)} module boundary files matching {pat}"
+                    if all(match.is_dir() for match in matches):
+                        kind_label = "directories"
+                    elif all(match.is_file() for match in matches):
+                        kind_label = "files"
+                    else:
+                        kind_label = "entries"
+                    return True, f"Found {len(matches)} module boundary {kind_label} matching {pat}"
             elif (root / pat).exists():
                 return True, f"Module boundary manifest found: {pat}"
 

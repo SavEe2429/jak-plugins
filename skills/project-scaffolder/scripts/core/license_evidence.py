@@ -18,16 +18,35 @@ def inspect_license_evidence(root: Path, relative_path: str):
     if not isinstance(relative_path, str) or not relative_path.strip():
         return {"status": "not-verified", "reason": "a relative SBOM path is required"}
     candidate = Path(relative_path)
-    if candidate.is_absolute() or ".." in candidate.parts:
-        return {"status": "not-verified", "reason": "SBOM path must stay inside the target project"}
+    if candidate.is_absolute() or candidate.anchor:
+        return {
+            "status": "not-verified",
+            "reason": f"SBOM path '{relative_path}' is outside the target project: provide a relative path inside the target directory instead of an absolute or rooted path",
+        }
+    if ".." in candidate.parts:
+        return {
+            "status": "not-verified",
+            "reason": f"SBOM path '{relative_path}' escapes outside the target project ('..' traversal is not permitted)",
+        }
     root = root.resolve()
     path = (root / candidate).resolve()
     try:
         path.relative_to(root)
     except ValueError:
-        return {"status": "not-verified", "reason": "SBOM path resolves outside the target project"}
+        return {
+            "status": "not-verified",
+            "reason": f"SBOM path '{relative_path}' resolves outside the target project boundary",
+        }
+    if not path.exists():
+        return {
+            "status": "not-verified",
+            "reason": f"SBOM file is missing at relative path inside target project: {relative_path}",
+        }
     if not path.is_file():
-        return {"status": "not-verified", "reason": "SBOM file is missing"}
+        return {
+            "status": "not-verified",
+            "reason": f"SBOM path exists inside target project but is not a regular file: {relative_path}",
+        }
     try:
         if path.stat().st_size > MAX_SBOM_BYTES:
             return {"status": "not-verified", "reason": "SBOM exceeds the 5 MiB read limit"}

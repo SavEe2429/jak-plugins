@@ -11,7 +11,7 @@ description: >-
   Core/Supporting Capabilities, Resource recommendations, and evidence statuses.
   Does not design or scaffold repository directories, manifests, or project source trees.
 metadata:
-  version: "4.15.0"
+  version: "4.15.1"
 allowed-tools:
   - "Bash(python scripts/*)"
   - "Bash(uv run python .agents/skills/skill-factory/scripts/*)"
@@ -329,7 +329,7 @@ unless asked.
 Deterministic helper scripts in `scripts/`:
 
 - `scripts/scaffold_skill.py`: Universal lifecycle orchestrator (`--match`, `--scan`, `--compose`, `--synthesize`, `--scope <project|user>`).
-- `scripts/skill_synthesizer.py`: Staged skill synthesis with atomic directory replacement and backup-preserving rollback on restore failure; no absolute zero-data-loss guarantee is claimed.
+- `scripts/skill_synthesizer.py`: Staged skill synthesis with atomic directory replacement (`--update-existing` replaces the entire target skill folder cleanly, removing stale/unbundled files) and backup-preserving rollback on restore failure; no absolute zero-data-loss guarantee is claimed.
 - `scripts/deduplication_engine.py`: 4-Gate Anti-Sprawl engine (Semantic Overlap, Entity Ownership, Complexity/ROI, Negative Boundaries).
 - `scripts/security_scanner.py`: AST data-flow threat scanner, source-to-sink credential tracking, syntax error detection, declared-tool inspection, and explicit excluded-file coverage reporting. It cannot prove host/runtime permission enforcement.
 - `scripts/capability_matcher.py`: Context-aware capability resolution and negative context matching.

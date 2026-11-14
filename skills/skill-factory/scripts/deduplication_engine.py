@@ -10,7 +10,10 @@ Implements the official 4-Gate Architecture from references/skill_deduplication_
 - Gate 4: Negative Trigger Boundary (Ensure unambiguous positive/negative activation boundaries)
 """
 
+import argparse
+import json
 import re
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -317,8 +320,12 @@ class DeduplicationEngine:
 
     def extract_workflow_steps_count(self, text: str) -> int:
         """Estimates deterministic workflow steps count from text structure."""
-        # 1. Numbered lists (e.g., 1. 2. 3. or Step 1, Step 2)
-        numbered = re.findall(r"(?:^|\n)\s*(?:\d+[\.\)]|step\s+\d+[:\.]?)", text, re.IGNORECASE)
+        # 1. Numbered lists — multiline or inline (e.g., '1. ... 2. ... 3. ...' or 'Step 1, Step 2')
+        numbered = re.findall(
+            r"(?:^|(?<=[\s;(]))(?:\d+\.(?=\s|$)|\d+\)|step\s+\d+[:\.]?)",
+            text,
+            re.IGNORECASE,
+        )
         if len(numbered) >= 2:
             return len(numbered)
 
@@ -345,16 +352,25 @@ class DeduplicationEngine:
         pos_triggers = []
         neg_boundaries = []
 
-        # Parse 'WHEN TO USE:' and 'WHEN NOT TO USE:'
-        pos_match = re.search(r"WHEN TO USE:?\s*([^-\n]+)", desc + " " + content, re.IGNORECASE)
+        # Parse 'WHEN TO USE:' and 'WHEN NOT TO USE:' without truncating hyphenated tokens (e.g., esp-idf)
+        combined = desc + " " + content
+        pos_match = re.search(
+            r"WHEN TO USE:?\s*(.+?)(?=\s*(?:WHEN NOT TO USE|DO NOT USE|---|\n|$))",
+            combined,
+            re.IGNORECASE,
+        )
         if pos_match:
-            pos_triggers.extend([t.strip() for t in pos_match.group(1).split(",") if t.strip()])
+            pos_raw = pos_match.group(1).strip().rstrip(".")
+            pos_triggers.extend([t.strip() for t in pos_raw.split(",") if t.strip()])
 
         neg_match = re.search(
-            r"WHEN NOT TO USE:?\s*([^-\n\.]+)", desc + " " + content, re.IGNORECASE
+            r"WHEN NOT TO USE:?\s*(.+?)(?=\s*(?:WHEN TO USE|---|\n|\.(?:\s|$)|$))",
+            combined,
+            re.IGNORECASE,
         )
         if neg_match:
-            neg_boundaries.extend([t.strip() for t in neg_match.group(1).split(",") if t.strip()])
+            neg_raw = neg_match.group(1).strip().rstrip(".")
+            neg_boundaries.extend([t.strip() for t in neg_raw.split(",") if t.strip()])
 
         # If not structured, use skill name and tokens
         if not pos_triggers:
@@ -580,13 +596,34 @@ class DeduplicationEngine:
             return report
 
         # 2. Strict Negative Boundary Requirement (must have meaningful content, not empty placeholder)
+        meaningless_words = {
+            "none",
+            "n/a",
+            "na",
+            "no",
+            "nothing",
+            "any",
+            "everything",
+            "all",
+            "applicable",
+            "unspecified",
+            "unknown",
+            "tbd",
+            "todo",
+            "placeholder",
+            "empty",
+            "use",
+            "when",
+            "for",
+            "not",
+        }
+
         def check_meaningful_negative_boundary(desc: str, neg_trigs: Optional[List[str]]) -> bool:
             if neg_trigs:
                 valid = [
                     t.strip()
                     for t in neg_trigs
-                    if len(t.strip()) >= 3
-                    and t.strip().lower() not in ("none", "n/a", "no", "nothing", "not applicable")
+                    if len(t.strip()) >= 3 and t.strip().lower() not in meaningless_words
                 ]
                 if valid:
                     return True
@@ -603,13 +640,16 @@ class DeduplicationEngine:
                 idx = desc_lower.find(m)
                 if idx != -1:
                     remainder = desc_lower[idx + len(m) :].lstrip(" :\t--*")
-                    clause = re.split(r"\n\s*[a-z\-]+:|\n\n|\.", remainder)[0].strip()
-                    tokens = [
-                        w
-                        for w in re.findall(r"\b[a-z]{3,}\b", clause)
-                        if w not in ("none", "applicable", "nothing", "use", "when", "for", "not")
-                    ]
-                    if len(tokens) >= 2:
+                    clause = re.split(r"\n\s*[a-z\-]+:|\n\n|\.(?:\s|$)", remainder)[0].strip()
+                    if clause in meaningless_words or clause in ("not applicable", "n/a", ""):
+                        continue
+                    # Support single-keyword or hyphenated negative boundaries (e.g., 'refactoring', 'esp-idf')
+                    raw_tokens = re.findall(
+                        r"\b[a-z0-9]{2,}(?:-[a-z0-9]{2,})+\b|\b[a-z0-9]{3,}\b|[\u0e00-\u0e7f]{2,}",
+                        clause,
+                    )
+                    tokens = [w for w in raw_tokens if w not in meaningless_words]
+                    if len(tokens) >= 1:
                         return True
             return False
 
@@ -655,7 +695,53 @@ def check_4gate_deduplication(
 
     passed = res["decision"] == "PASS_SYNTHESIS"
     primary_reason = res["reasons"][0] if res["reasons"] else res["decision"]
-    matched_target = res["gate1_semantic_overlap"].get("matched_skill") or res[
-        "gate2_entity_lifecycle"
-    ].get("owner_skill")
+    conflicting = res["gate4_negative_boundary"].get("conflicting_triggers") or []
+    gate4_conflict = conflicting[0].get("conflicting_skill") if conflicting else None
+    matched_target = (
+        res["gate1_semantic_overlap"].get("matched_skill")
+        or res["gate2_entity_lifecycle"].get("owner_skill")
+        or gate4_conflict
+    )
     return passed, primary_reason, matched_target
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="4-Gate Anti-Sprawl & Skill Deduplication Engine"
+    )
+    parser.add_argument("--name", required=True, help="Candidate skill name")
+    parser.add_argument("--desc", default="", help="Candidate skill description")
+    parser.add_argument(
+        "--skills-dir",
+        action="append",
+        dest="skills_dirs",
+        help="Installed skills root directory (repeatable)",
+    )
+    parser.add_argument("--steps", type=int, default=None, help="Explicit workflow step count")
+    parser.add_argument(
+        "--update-existing",
+        action="store_true",
+        help="Allow updating an existing skill with the same exact name",
+    )
+    parser.add_argument("--json", action="store_true", help="Output pure JSON report")
+    args = parser.parse_args()
+
+    dirs = [Path(d).expanduser().resolve() for d in (args.skills_dirs or [])]
+    engine = DeduplicationEngine(dirs)
+    report = engine.evaluate_candidate(
+        args.name,
+        args.desc,
+        steps_count=args.steps,
+        ignore_exact_name=args.update_existing,
+    )
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        print(f"Decision: {report['decision']} ({report['action']})")
+        for r in report.get("reasons", []):
+            print(f" - {r}")
+    sys.exit(0 if report["decision"] == "PASS_SYNTHESIS" else 1)
+
+
+if __name__ == "__main__":
+    main()

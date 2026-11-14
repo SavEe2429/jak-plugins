@@ -38,5 +38,5 @@
       "template": "#include <unity.h>\n\nvoid test_addition(void) {\n  TEST_ASSERT_EQUAL(5, 2 + 3);\n}\n"
     }
   ],
-  "ci_workflow": "name: {project_name} CI Pipeline\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - uses: actions/setup-python@v5\n      - run: pip install platformio\n      - run: pio run\n"
+  "ci_workflow": "name: {project_name} CI Pipeline\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - uses: actions/setup-python@v5\n      - run: pip install platformio\n      - run: pio test -e native\n      - run: pio run\n"
 }

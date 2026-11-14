@@ -26,6 +26,21 @@
       "path": "main/main.c",
       "description": "ESP-IDF app_main baseline",
       "template": "#include <stdio.h>\n\nvoid app_main(void)\n{\n    printf(\"Initializing {project_name}...\\n\");\n}\n"
+    },
+    {
+      "path": "CMakeLists.txt",
+      "description": "ESP-IDF root CMake project file",
+      "template": "cmake_minimum_required(VERSION 3.16)\n\ninclude($ENV{IDF_PATH}/tools/cmake/project.cmake)\nproject({project_name})\n"
+    },
+    {
+      "path": "main/CMakeLists.txt",
+      "description": "ESP-IDF main component CMake registration",
+      "template": "idf_component_register(SRCS \"main.c\"\n                    INCLUDE_DIRS \".\" \"../include\")\n"
+    },
+    {
+      "path": "sdkconfig",
+      "description": "ESP-IDF baseline target configuration marker",
+      "template": "# Baseline ESP-IDF configuration marker for {project_name}\nCONFIG_IDF_TARGET=\"esp32\"\n"
     }
   ],
   "smoke_tests": [
@@ -35,5 +50,5 @@
       "template": "#include <unity.h>\n\nvoid test_baseline(void)\n{\n    TEST_ASSERT_EQUAL(1, 1);\n}\n"
     }
   ],
-  "ci_workflow": "name: {project_name} CI Pipeline\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - name: Verify Strict LF\n        run: |;\n          if grep -r $'\\r' --exclude-dir=.git .; then\n            echo \"CRLF line endings detected!\"\n            exit 1\n          fi\n"
+  "ci_workflow": "name: {project_name} CI Pipeline\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    container:\n      image: espressif/idf:v5.4\n    steps:\n      - uses: actions/checkout@v7\n      - name: Verify Strict LF\n        run: |\n          if grep -r $'\\r' --exclude-dir=.git .; then\n            echo \"CRLF line endings detected!\"\n            exit 1\n          fi\n      - name: Build ESP-IDF Firmware\n        run: |\n          if [ -n \"${IDF_PATH:-}\" ] && [ -f \"$IDF_PATH/export.sh\" ]; then\n            . \"$IDF_PATH/export.sh\"\n          fi\n          idf.py build\n      - name: Run ESP-IDF Tests\n        run: |\n          if [ -n \"${IDF_PATH:-}\" ] && [ -f \"$IDF_PATH/export.sh\" ]; then\n            . \"$IDF_PATH/export.sh\"\n          fi\n          idf.py test\n"
 }

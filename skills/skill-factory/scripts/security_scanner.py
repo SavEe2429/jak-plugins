@@ -1049,12 +1049,14 @@ def scan_all_installed_skills(skills_root: Path) -> Dict[str, Any]:
     results = []
     total_findings = 0
     total_critical = 0
+    total_high = 0
 
     for sdir in skills_root.iterdir():
         if sdir.is_dir() and not sdir.name.startswith("."):
             res = scan_skill_directory(sdir)
             total_findings += len(res["findings"])
             total_critical += res.get("critical_count", 0)
+            total_high += res.get("high_count", 0)
             results.append(res)
 
     skillspector_audit = scan_with_skillspector(skills_root)
@@ -1072,8 +1074,10 @@ def scan_all_installed_skills(skills_root: Path) -> Dict[str, Any]:
         != "VERIFIED BY HOST RUNTIME EVIDENCE"
     )
 
-    if total_critical > 0 or any(r["status"] == "FAIL" for r in results):
+    if total_critical > 0:
         overall_status = "FAIL (TIER 4 BLOCKED - CRITICAL FINDINGS)"
+    elif total_high > 0 or any(r["status"] == "FAIL" for r in results):
+        overall_status = "FAIL (HIGH SEVERITY FINDINGS)"
     elif total_findings > 0:
         overall_status = "WARNING (TIER 3 - MANUAL AUDIT REQUIRED)"
     elif permission_review_count:
@@ -1098,6 +1102,7 @@ def scan_all_installed_skills(skills_root: Path) -> Dict[str, Any]:
         "scanned_count": len(results),
         "total_findings": total_findings,
         "total_critical": total_critical,
+        "total_high": total_high,
         "partial_coverage_count": partial_coverage_count,
         "permission_review_count": permission_review_count,
         "runtime_enforcement_unverified_count": runtime_enforcement_unverified_count,

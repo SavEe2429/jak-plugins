@@ -448,8 +448,8 @@ class CapabilityCompositionEngine:
                         # Prevent artificial cycles from generic pass-through tokens (e.g. content_payload)
                         # by respecting canonical lifecycle facet order
                         if shared == {"content_payload"} and facet_rank.get(
-                            a.facet, 0
-                        ) >= facet_rank.get(b.facet, 0):
+                            a.facet, 4
+                        ) >= facet_rank.get(b.facet, 4):
                             continue
                         adj_list[a.id].append(b.id)
                         in_degree[b.id] += 1
@@ -460,7 +460,7 @@ class CapabilityCompositionEngine:
 
         while queue:
             # Deterministic ordering by lifecycle facet rank, then contract id
-            queue.sort(key=lambda cid: (facet_rank.get(contract_map[cid].facet, 0), cid))
+            queue.sort(key=lambda cid: (facet_rank.get(contract_map[cid].facet, 4), cid))
             curr = queue.pop(0)
             sorted_ids.append(curr)
 
@@ -547,7 +547,7 @@ class CapabilityCompositionEngine:
             available_inputs = set()
             if domain == "software":
                 available_inputs.add("workspace_path")
-            if has_task_context:
+            if has_task_context or domain == "general":
                 available_inputs.add("task_prompt")
 
         # Context-aware contract selection
@@ -607,6 +607,7 @@ class CapabilityCompositionEngine:
                     selected_contracts.append(self.registry["test-runner"])
             else:
                 matching = [c for c in self.registry.values() if c.facet == facet or c.id == facet]
+                matched_any = False
                 for m in matching:
                     if (
                         domain != "software"
@@ -614,9 +615,30 @@ class CapabilityCompositionEngine:
                         and "task_prompt" not in m.inputs
                     ):
                         continue
+                    matched_any = True
                     if m not in selected_contracts:
                         selected_contracts.append(m)
                         break
+                if (
+                    not matched_any
+                    and facet
+                    and not any(c.facet == facet or c.id == facet for c in selected_contracts)
+                ):
+                    custom_slug = re.sub(r"[^a-z0-9-]+", "-", facet.lower()).strip("-") or "custom-facet"
+                    custom_inputs = ["workspace_path"] if domain == "software" else ["task_prompt"]
+                    selected_contracts.append(
+                        CapabilityContract(
+                            id=f"custom-{custom_slug}",
+                            name=facet.replace("_", " ").replace("-", " ").title(),
+                            facet=facet,
+                            inputs=custom_inputs,
+                            outputs=[f"{facet}_output", "content_payload"],
+                            preconditions=["Open-domain facet requested via explicit --facets"],
+                            permissions=[],
+                            verification=f"Validate {facet} deliverable completeness",
+                            failure_modes=[f"Incomplete {facet} output"],
+                        )
+                    )
 
         # Dynamic Dependency Resolution:
         # If any selected contract needs an input not yet provided,
@@ -698,15 +720,38 @@ class CapabilityCompositionEngine:
             )
 
         # Build Mermaid Workflow DAG Diagram
+        mermaid_facet_rank = {
+            f: i
+            for i, f in enumerate(
+                [
+                    "planning",
+                    "research",
+                    "design",
+                    "creation",
+                    "analysis",
+                    "security",
+                    "validation",
+                    "orchestration",
+                    "delivery",
+                    "learning",
+                ]
+            )
+        }
         mermaid_lines = ["flowchart TD"]
         for c in sorted_contracts:
             mermaid_lines.append(f'    {c.id.replace("-", "_")}["{c.name} ({c.facet.upper()})"]')
 
         for u in sorted_contracts:
             for v in sorted_contracts:
+                if u.id == v.id:
+                    continue
                 shared = set(u.outputs).intersection(set(v.inputs))
                 if shared:
-                    label = list(shared)[0]
+                    if shared == {"content_payload"} and mermaid_facet_rank.get(
+                        u.facet, 4
+                    ) >= mermaid_facet_rank.get(v.facet, 4):
+                        continue
+                    label = sorted(shared)[0]
                     mermaid_lines.append(
                         f"    {u.id.replace('-', '_')} -->|{label}| {v.id.replace('-', '_')}"
                     )
@@ -717,6 +762,7 @@ class CapabilityCompositionEngine:
         parallel_batches: List[List[str]] = []
         assigned_cids: Set[str] = set()
         current_available = set(available_inputs)
+        selected_by_id = {c.id: c for c in sorted_contracts}
 
         while len(assigned_cids) < len(sorted_contracts):
             current_batch = []
@@ -733,7 +779,7 @@ class CapabilityCompositionEngine:
             parallel_batches.append(current_batch)
             for cid in current_batch:
                 assigned_cids.add(cid)
-                contract_obj = self.registry.get(cid)
+                contract_obj = selected_by_id.get(cid) or self.registry.get(cid)
                 if contract_obj:
                     current_available.update(contract_obj.outputs)
 
@@ -746,7 +792,12 @@ class CapabilityCompositionEngine:
             "warnings": [],
         }
         if has_task_context:
-            tc_lower = task_context.lower()
+            try:
+                from capability_matcher import ContextAwareCapabilityResolver
+
+                tc_lower = ContextAwareCapabilityResolver(task_context).positive_task.lower()
+            except Exception:
+                tc_lower = task_context.lower()
             facet_signals = {
                 "security": [
                     "security",
@@ -914,6 +965,7 @@ def main():
 
     composer = CapabilityCompositionEngine()
 
+    explicit_facets = [f.strip() for f in args.facets.split(",") if f.strip()] if args.facets else []
     facets: List[str] = []
     initial_inputs: Set[str] = set()
     if args.inputs:
@@ -927,8 +979,14 @@ def main():
             match_capabilities_for_context,
         )
 
-        matched = match_capabilities_for_context(args.task)
+        matched = match_capabilities_for_context(
+            args.task,
+            explicit_facets=explicit_facets or None,
+        )
         facets = [c["facet"] for c in matched]
+        for ef in explicit_facets:
+            if ef not in facets:
+                facets.append(ef)
 
         if is_non_software_context(args.task):
             if domain == "auto":
@@ -938,14 +996,14 @@ def main():
         else:
             if not initial_inputs:
                 initial_inputs = {"workspace_path"}
-    elif args.facets:
-        facets = [f.strip() for f in args.facets.split(",") if f.strip()]
+    elif explicit_facets:
+        facets = explicit_facets
         if not initial_inputs:
-            initial_inputs = {"workspace_path"}
+            initial_inputs = {"task_prompt"} if domain == "general" else {"workspace_path"}
     else:
         facets = ["research", "analysis", "security", "validation", "delivery"]
         if not initial_inputs:
-            initial_inputs = {"workspace_path"}
+            initial_inputs = {"task_prompt"} if domain == "general" else {"workspace_path"}
 
     flow = composer.compose_workflow_for_task(
         facets, initial_inputs=initial_inputs, domain=domain, task_context=args.task

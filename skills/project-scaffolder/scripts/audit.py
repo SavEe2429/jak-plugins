@@ -111,6 +111,9 @@ def main():
         print(
             "Clarify the project domain and toolchain, or add a profile with explicit audit criteria."
         )
+        print(
+            "For non-software or custom-domain projects, define explicit domain criteria instead of using software stack defaults."
+        )
         sys.exit(2)
 
     results = run_audit(target, adapter=adapter, topology=topology)

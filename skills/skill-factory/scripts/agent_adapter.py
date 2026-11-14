@@ -15,6 +15,8 @@ Capabilities:
 """
 
 import abc
+import argparse
+import json
 import shutil
 import sys
 from pathlib import Path
@@ -584,15 +586,62 @@ class AgentEnvironmentAdapter:
 
 
 def main():
-    target = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
-    adapter = AgentEnvironmentAdapter(target)
+    parser = argparse.ArgumentParser(
+        description="Agent Environment Ports & Adapters Status & Install Scope Resolver"
+    )
+    parser.add_argument(
+        "target",
+        nargs="?",
+        default=".",
+        help="Target workspace path (default: '.')",
+    )
+    parser.add_argument(
+        "--agent",
+        choices=["gemini", "claude", "codex", "cursor", "copilot", "local"],
+        default=None,
+        help="Explicitly declare the active host agent harness",
+    )
+    parser.add_argument(
+        "--scope",
+        default="workspace",
+        help="Install scope ('project', 'workspace', 'user', or 'global'; default: 'workspace')",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output pure JSON diagnostics",
+    )
+    args = parser.parse_args()
+
+    try:
+        normalized_scope = normalize_install_scope(args.scope)
+    except ValueError as exc:
+        parser.error(str(exc))
+
+    target = Path(args.target).resolve()
+    adapter = AgentEnvironmentAdapter(target, active_agent=args.agent)
     envs = adapter.detect_available_environments()
     roots = adapter.resolve_skills_discovery_roots()
+    install_dir = adapter.resolve_target_install_directory(normalized_scope)
+
+    if args.json:
+        payload = {
+            "workspace": str(adapter.workspace),
+            "active_agent": args.agent,
+            "scope": normalized_scope,
+            "target_install_dir": str(install_dir),
+            "environments": envs,
+            "discovery_roots": [str(r) for r in roots],
+        }
+        print(json.dumps(payload, indent=2, default=str))
+        return
 
     print("================================================================================")
     print("      AGENT ENVIRONMENT PORTS & ADAPTERS (STATUS MATRIX)                        ")
     print("================================================================================")
-    print(f"Workspace Directory : {target}\n")
+    print(f"Workspace Directory : {adapter.workspace}")
+    print(f"Install Scope       : {normalized_scope}")
+    print(f"Target Install Dir  : {install_dir}\n")
 
     print("Detected Agent Environments:")
     for e in envs:

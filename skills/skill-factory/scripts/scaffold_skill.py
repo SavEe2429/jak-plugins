@@ -63,6 +63,33 @@ def audit_project_infrastructure_evidence(
         for w in ["explore", "exploratory", "investigate", "prototype", "idea", "experiment"]
     )
 
+    subproject_dirs: List[Path] = [repo_path]
+    for sub_name in ("frontend", "backend", "services", "apps", "firmware", "packages"):
+        sub_path = repo_path / sub_name
+        if sub_path.is_dir():
+            subproject_dirs.append(sub_path)
+            if sub_name in ("services", "apps", "packages"):
+                try:
+                    for nested in sorted(sub_path.iterdir()):
+                        if nested.is_dir() and nested.name not in ("node_modules", ".venv", "__pycache__"):
+                            subproject_dirs.append(nested)
+                except OSError:
+                    pass
+
+    def _find_evidence_files(candidates: List[str]) -> List[str]:
+        found: List[str] = []
+        for search_root in subproject_dirs:
+            for fname in candidates:
+                candidate = search_root / fname
+                if candidate.exists():
+                    try:
+                        rel_str = str(candidate.relative_to(repo_path)).replace("\\", "/")
+                    except ValueError:
+                        rel_str = fname
+                    if rel_str not in found:
+                        found.append(rel_str)
+        return found
+
     # 1. Dependency Lockfile
     lockfiles = [
         "uv.lock",
@@ -78,9 +105,7 @@ def audit_project_infrastructure_evidence(
         "requirements.txt",
         "pyproject.toml",
     ]
-    found_locks = [
-        f for f in lockfiles if (repo_path / f).exists() or (repo_path / "frontend" / f).exists()
-    ]
+    found_locks = _find_evidence_files(lockfiles)
     if is_non_software:
         lock_status = "NOT APPLICABLE"
         lock_details = "Not applicable for non-software / analytical deliverables."
@@ -152,9 +177,7 @@ def audit_project_infrastructure_evidence(
         "biome.json",
         ".eslintrc.json",
     ]
-    found_linters = [
-        f for f in linters if (repo_path / f).exists() or (repo_path / "frontend" / f).exists()
-    ]
+    found_linters = _find_evidence_files(linters)
     if is_non_software:
         l_status = "NOT APPLICABLE"
         l_details = "Code linters not applicable for document/analytical workflow."
@@ -261,6 +284,59 @@ def audit_project_infrastructure_evidence(
                 else "External references optional; ad-hoc authoring.",
             }
         )
+    else:
+        embedded_markers = {
+            "sdkconfig",
+            "platformio.ini",
+            "cmakelists.txt",
+            "idf_component.yml",
+            "west.yml",
+        }
+        has_embedded_marker = any(
+            path.name.lower() in embedded_markers
+            or path.suffix.lower() in (".ioc", ".overlay", ".dts")
+            for path, _ in _iter_audit_files(repo_path)
+        )
+        if has_embedded_marker:
+            emb = audit_embedded_project_evidence(repo_path)
+            if emb["platformio_ini"]["status"] == "EVIDENCED":
+                checks.append(
+                    {
+                        "id": "embedded_platformio",
+                        "name": "Embedded PlatformIO Environment",
+                        "status": "EVIDENCED",
+                        "details": (
+                            "Verified [env:*], platform, board in "
+                            + ", ".join(emb["platformio_ini"]["evidence"])
+                        ),
+                    }
+                )
+            hw = emb["hardware_configuration"]
+            checks.append(
+                {
+                    "id": "embedded_hardware_config",
+                    "name": "Embedded Hardware & Build Configuration",
+                    "status": hw["status"],
+                    "details": (
+                        f"Found: {', '.join(hw['evidence'])}"
+                        if hw["evidence"]
+                        else "No embedded hardware/firmware configuration detected."
+                    ),
+                }
+            )
+            ut = emb["unit_test_harness"]
+            checks.append(
+                {
+                    "id": "embedded_unit_tests",
+                    "name": "Embedded Unit Test Harness",
+                    "status": ut["status"],
+                    "details": (
+                        f"Found embedded test files ({emb['runner_policy']}): {', '.join(ut['evidence'])}"
+                        if ut["evidence"]
+                        else f"No embedded unit tests detected ({emb['runner_policy']})."
+                    ),
+                }
+            )
 
     return checks
 
@@ -487,6 +563,10 @@ def main():
     )
     skills_roots = adapter.resolve_skills_discovery_roots()
 
+    explicit_facets = [f.strip() for f in args.facets.split(",") if f.strip()] if args.facets else None
+    excluded_facets = [f.strip() for f in args.exclude_facets.split(",") if f.strip()] if args.exclude_facets else None
+    custom_queries = [q.strip() for q in args.queries.split(",") if q.strip()] if args.queries else None
+
     if not args.json:
         print("================================================================================")
         print("       SKILL FACTORY: UNIVERSAL AGENT CAPABILITY LIFECYCLE ORCHESTRATOR         ")
@@ -498,10 +578,16 @@ def main():
     # Command: Compose Workflow Pipeline
     if args.compose:
         task_desc = args.task.strip() if args.task else ""
+        excluded_set = {f.lower() for f in (excluded_facets or [])}
         if task_desc:
-            matched = analyze_task_capabilities(task_desc)
+            matched = analyze_task_capabilities(
+                task_desc,
+                explicit_facets=explicit_facets,
+                excluded_facets=excluded_facets,
+                explicit_intent=args.intent or None,
+            )
             if matched:
-                cap_ids = [c["id"] for c in matched]
+                cap_ids = [c["id"] for c in matched if c["id"].lower() not in excluded_set]
             else:
                 from capability_matcher import classify_domain_class
 
@@ -510,9 +596,14 @@ def main():
                     cap_ids = ["research", "analysis", "security", "validation", "delivery"]
                 else:
                     cap_ids = ["planning", "research", "delivery"]
+                cap_ids = [c for c in cap_ids if c.lower() not in excluded_set]
+        elif explicit_facets:
+            cap_ids = [f for f in explicit_facets if f.lower() not in excluded_set]
         else:
             # When task description is omitted, do not inject canned software prompts
-            cap_ids = ["planning", "research", "delivery"]
+            cap_ids = [
+                f for f in ["planning", "research", "delivery"] if f.lower() not in excluded_set
+            ]
         composer = CapabilityCompositionEngine()
         flow = composer.compose_workflow_for_task(cap_ids, domain="auto", task_context=task_desc)
 
@@ -579,24 +670,43 @@ def main():
 
     # Command: Security Scan
     if args.scan:
-        print("\n[Executing Multi-Layer Security Scan across Installed Skills...]")
-        for root in skills_roots:
+        scan_targets = [custom_skills_dir] if custom_skills_dir else skills_roots
+        scan_reports = []
+        for root in scan_targets:
             if root.exists():
                 audit = scan_all_installed_skills(root)
-                print(f"\nSkills Root: {root} ({audit['scanned_count']} skills)")
-                print(f"Static Threat Findings: {audit['total_findings']}")
-                print(f"SkillSpector Status   : {audit['skillspector']['status']}")
-                for s in audit["results"]:
-                    sym = "[x] CLEAN " if s["status"] == "CLEAN" else "[!] FLAGGED"
-                    print(
-                        f"  {sym} - {s['skill']:<30} | Files: {s['scanned_files']:<2} | Findings: {len(s['findings'])}"
-                    )
+                scan_reports.append(audit)
+
+        if args.json:
+            print(json.dumps({"scan_roots": scan_reports}, indent=2))
+            return
+
+        print("\n[Executing Multi-Layer Security Scan across Installed Skills...]")
+        for audit in scan_reports:
+            print(f"\nSkills Root: {audit['skills_root']} ({audit['scanned_count']} skills)")
+            print(f"Overall Status        : {audit['overall_status']}")
+            print(f"Static Threat Findings: {audit['total_findings']}")
+            print(f"SkillSpector Status   : {audit['skillspector']['status']}")
+            for s in audit["results"]:
+                if s["status"] == "CLEAN":
+                    sym = "[x] CLEAN  "
+                elif s["status"] == "WARNING":
+                    sym = "[!] WARNING"
+                else:
+                    sym = "[!] FAIL   "
+                print(
+                    f"  {sym} - {s['skill']:<30} | Files: {s['scanned_files']:<2} | Findings: {len(s['findings'])}"
+                )
         return
 
     # Command: Synthesize Skill
     if args.synthesize:
         if not args.name or not args.desc:
-            print("[ERROR] Synthesis requires --name <slug> and --desc <description>.")
+            msg = "Synthesis requires --name <slug> and --desc <description>."
+            if args.json:
+                print(json.dumps({"success": False, "error": msg, "stage": "arguments"}))
+            else:
+                print(f"[ERROR] {msg}")
             sys.exit(1)
 
         # --target-dir selects the workspace root; the active adapter chooses
@@ -621,8 +731,24 @@ def main():
             else []
         )
 
+        # Include --rule steps when evaluating Gate 3 workflow complexity
+        rule_steps = len([r for r in (args.rule or []) if r and r.strip()])
+        steps_override: Optional[int] = None
+        if rule_steps > 0:
+            from deduplication_engine import DeduplicationEngine
+
+            desc_steps = DeduplicationEngine([]).extract_workflow_steps_count(args.desc)
+            if desc_steps >= 2:
+                steps_override = desc_steps + rule_steps
+            elif rule_steps >= 3:
+                steps_override = rule_steps
+
         pass_dedup, dedup_msg, conflicting_skill = check_4gate_deduplication(
-            args.name, args.desc, existing_skills, ignore_exact_name=args.update_existing
+            args.name,
+            args.desc,
+            existing_skills,
+            steps_count=steps_override,
+            ignore_exact_name=args.update_existing,
         )
         if not pass_dedup and not args.dedup_override:
             if args.json:
@@ -638,9 +764,14 @@ def main():
                 )
                 sys.exit(1)
             print(f"[DEDUPLICATION REJECTION] {dedup_msg}")
-            print(
-                f"  -> Recommended: Extend or use existing skill '{conflicting_skill}' instead of creating a micro-skill."
-            )
+            if conflicting_skill:
+                print(
+                    f"  -> Recommended: Extend or use existing skill '{conflicting_skill}' instead of creating a micro-skill."
+                )
+            else:
+                print(
+                    "  -> Recommended: Ensure >= 3 deterministic workflow steps and explicit 'WHEN NOT TO USE' scope boundaries."
+                )
             sys.exit(1)
 
         if not pass_dedup and args.dedup_override:
@@ -685,17 +816,17 @@ def main():
 
     # Infrastructure audit is opt-in. Its current checks are software-oriented
     # and should not be imposed on other domains or on ordinary capability lookup.
+    infra_checks: Optional[List[Dict[str, Any]]] = None
     if args.audit:
         infra_checks = audit_project_infrastructure_evidence(workspace_path, task_context=task_desc)
-        print_infrastructure_report(infra_checks, workspace_path)
+        if not args.json:
+            print_infrastructure_report(infra_checks, workspace_path)
 
     # 2. Dynamic Capability Matching (Supports AI Semantic Thinking Step 0 Overrides)
-    print("\n--------------------------------------------------------------------------------")
-    print("             TASK CAPABILITY REQUIREMENTS & MATCHED AGENT TOOLS                 ")
-    print("--------------------------------------------------------------------------------")
-    explicit_facets = [f.strip() for f in args.facets.split(",") if f.strip()] if args.facets else None
-    excluded_facets = [f.strip() for f in args.exclude_facets.split(",") if f.strip()] if args.exclude_facets else None
-    custom_queries = [q.strip() for q in args.queries.split(",") if q.strip()] if args.queries else None
+    if not args.json:
+        print("\n--------------------------------------------------------------------------------")
+        print("             TASK CAPABILITY REQUIREMENTS & MATCHED AGENT TOOLS                 ")
+        print("--------------------------------------------------------------------------------")
 
     matched_caps = analyze_task_capabilities(
         task_desc,
@@ -776,33 +907,60 @@ def main():
             else "[ ] UNMET (No matching installed skill)"
         )
 
-        print(f"  {idx:02d}. [{c['name']}]")
-        print(f"      Status   : {status_str}")
-        print(f"      Purpose  : {c['description']}")
-        print(f"      Built-in : {c['builtin_tool']}")
+        if not args.json:
+            print(f"  {idx:02d}. [{c['name']}]")
+            print(f"      Status   : {status_str}")
+            print(f"      Purpose  : {c['description']}")
+            print(f"      Built-in : {c['builtin_tool']}")
 
+    queries_dict: Dict[str, List[str]] = {}
     if unmet_caps or custom_queries:
-        print("\n--------------------------------------------------------------------------------")
-        print("             DUAL-TRACK AGENT-FIRST ONLINE SEARCH QUERIES (FOR UNMET GAPS)      ")
-        print("--------------------------------------------------------------------------------")
         queries_dict = generate_agent_search_queries(unmet_caps, task_desc, custom_queries)
-        print("  Track A (Native Agent Skills - Highest Priority):")
-        for qa in queries_dict["track_a_agent_skills"]:
-            print(f"    -> {qa}")
-        print("  Track B (MCP Servers - Secondary Priority):")
-        for qb in queries_dict["track_b_mcp_servers"]:
-            print(f"    -> {qb}")
+        if not args.json:
+            print("\n--------------------------------------------------------------------------------")
+            print("             DUAL-TRACK AGENT-FIRST ONLINE SEARCH QUERIES (FOR UNMET GAPS)      ")
+            print("--------------------------------------------------------------------------------")
+            print("  Track A (Native Agent Skills - Highest Priority):")
+            for qa in queries_dict["track_a_agent_skills"]:
+                print(f"    -> {qa}")
+            print("  Track B (MCP Servers - Secondary Priority):")
+            for qb in queries_dict["track_b_mcp_servers"]:
+                print(f"    -> {qb}")
+            if queries_dict.get("track_b_supporting_skills"):
+                print("  Track C (Supporting Craft Skills - Optional):")
+                for qc in queries_dict["track_b_supporting_skills"]:
+                    print(f"    -> {qc}")
 
     # 3. Security Status of Installed Skills
+    active_root = skills_roots[0] if skills_roots else None
+    audit_result = (
+        scan_all_installed_skills(active_root)
+        if active_root and active_root.exists()
+        else None
+    )
+
+    if args.json:
+        payload: Dict[str, Any] = {
+            "workspace": str(workspace_path),
+            "task": task_desc,
+            "matched_capabilities": matched_caps,
+            "installed_skills_by_capability": cap_to_skills,
+            "unmet_capabilities": [c["id"] for c in unmet_caps],
+            "search_queries": queries_dict,
+            "security_audit": audit_result,
+        }
+        if infra_checks is not None:
+            payload["infrastructure_audit"] = infra_checks
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return
+
     print("\n--------------------------------------------------------------------------------")
     print("             INSTALLED SKILLS SECURITY & TRUST STATUS                           ")
     print("--------------------------------------------------------------------------------")
-    active_root = skills_roots[0] if skills_roots else None
-    if active_root and active_root.exists():
-        audit = scan_all_installed_skills(active_root)
-        print(f"Root: {active_root} ({audit['scanned_count']} skills installed)")
-        print(f"Overall Static Threat Status : {audit['overall_status']}")
-        print(f"NVIDIA SkillSpector Engine   : {audit['skillspector']['status']}")
+    if audit_result is not None:
+        print(f"Root: {active_root} ({audit_result['scanned_count']} skills installed)")
+        print(f"Overall Static Threat Status : {audit_result['overall_status']}")
+        print(f"NVIDIA SkillSpector Engine   : {audit_result['skillspector']['status']}")
     else:
         print("No installed skills directory found to scan.")
 

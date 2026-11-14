@@ -18,13 +18,18 @@ def apply_toolchain_versions(providers, version_specs):
         provider_id, version = spec.split("=", 1)
         provider = by_id.get(provider_id)
         if provider is None:
+            from core.capability_registry import CapabilityRegistry
+
+            provider = by_id.get(CapabilityRegistry.resolve_id(provider_id))
+        if provider is None:
             raise ValueError("Version target provider is not selected: %s" % provider_id)
+        canonical_id = provider.id
         if provider.kind != "toolchain":
             raise ValueError("Version target must be a toolchain provider: %s" % provider_id)
         generation = provider.payload.get("generation")
         if not generation:
             raise ValueError("Provider does not declare a version file generator: %s" % provider_id)
-        if provider_id in updates:
+        if canonical_id in updates:
             raise ValueError("Multiple version values were supplied for %s" % provider_id)
         if not re.fullmatch(generation["validation_pattern"], version):
             raise ValueError("Version value is not accepted by provider %s" % provider_id)
@@ -38,7 +43,7 @@ def apply_toolchain_versions(providers, version_specs):
             }
         )
         payload["files"] = files
-        updates[provider_id] = replace(provider, payload=payload)
+        updates[canonical_id] = replace(provider, payload=payload)
     return [updates.get(provider.id, provider) for provider in providers]
 
 
@@ -224,6 +229,11 @@ def compose_plan(context, providers, registry=None):
     templates = [provider for provider in providers if provider.kind == "template"]
     if registry is not None:
         plan.conflicts.extend(registry.validate_selection([provider.id for provider in providers]))
+    if len(architectures) > 1:
+        plan.conflicts.append(
+            "Multiple architecture providers selected (%s); select at most one"
+            % ", ".join(sorted(provider.id for provider in architectures))
+        )
     for architecture in architectures:
         supported = set(architecture.payload.get("supported_template_capabilities", []))
         for template in templates:
@@ -243,6 +253,20 @@ def compose_plan(context, providers, registry=None):
     for provider in providers:
         plan.selected_provider_ids.append(provider.id)
         payload = provider.payload
+        declared_checks = list(payload.get("verification_checks", []))
+        if not declared_checks and provider.kind == "verification":
+            declared_checks = list(payload.get("checks", []))
+        for item in declared_checks:
+            plan.verification_checks.append(
+                VerificationCheck(
+                    id=item["id"],
+                    capability=provider.id,
+                    command=item.get("command", []),
+                    required=item.get("required", True),
+                    expected_evidence=item.get("expected_evidence", {}),
+                    execution_policy=item.get("execution_policy", {}),
+                )
+            )
         directory_paths = {item.rel_path for item in plan.directories}
         for item in payload.get("directories", []):
             if item["path"] not in directory_paths:
@@ -283,16 +307,6 @@ def compose_plan(context, providers, registry=None):
             "Conflicting file contributions for %s (%s)"
             % (rel_path, ", ".join(sorted(owners)))
         )
-        for item in payload.get("verification_checks", []):
-            plan.verification_checks.append(
-                VerificationCheck(
-                    id=item["id"],
-                    capability=provider.id,
-                    command=item.get("command", []),
-                    required=item.get("required", True),
-                    expected_evidence=item.get("expected_evidence", {}),
-                )
-            )
 
     plan.files = list(by_path.values())
     file_paths = {Path(item.rel_path) for item in plan.files}

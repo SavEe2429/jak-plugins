@@ -29,8 +29,15 @@ def _probe_version(command, root):
 def audit_package_manager(root: Path, registry: CapabilityRegistry):
     report = CapabilityResolver(registry).resolve(root, ["package_manager"])
     if report.status != "resolved":
+        has_evidence = any(item.evidence for item in report.candidates)
+        reason = (
+            "Multiple or ambiguous package manager signals were found; resolve one explicit manager."
+            if has_evidence or report.errors
+            else "No package-manager manifest or lockfile evidence found (non-software or unconfigured project)."
+        )
         return {
             "status": report.status,
+            "reason": reason,
             "candidates": [
                 {
                     "id": item.provider_id,

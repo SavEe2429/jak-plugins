@@ -39,8 +39,20 @@ class CapabilityRegistry:
                 self.load_errors.append({"path": str(json_file), "error": str(exc)})
         return loaded
 
+    PROVIDER_ALIASES = {
+        "toolchain.python-version": "toolchain.python-version-file",
+    }
+
+    @classmethod
+    def resolve_id(cls, provider_id: str) -> str:
+        """Resolve friendly aliases to canonical provider IDs without mutating canonical names."""
+        return cls.PROVIDER_ALIASES.get(provider_id, provider_id)
+
     def get(self, provider_id: str) -> Optional[ProviderDescriptor]:
-        return self._providers.get(provider_id)
+        descriptor = self._providers.get(provider_id)
+        if descriptor is not None:
+            return descriptor
+        return self._providers.get(self.resolve_id(provider_id))
 
     def list(self, kind: Optional[str] = None) -> List[ProviderDescriptor]:
         providers = list(self._providers.values())

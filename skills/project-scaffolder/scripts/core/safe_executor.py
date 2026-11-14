@@ -87,6 +87,19 @@ def _terminate_process_tree(process) -> None:
     process.kill()
 
 
+_WINDOWS_EXECUTABLE_SUFFIXES = (".exe", ".cmd", ".bat", ".com")
+
+
+def _strip_executable_suffix(name: str) -> str:
+    """Strip known executable extensions (plus Windows batch shims on Windows)."""
+    lowered = name.lower()
+    suffixes = _WINDOWS_EXECUTABLE_SUFFIXES if os.name == "nt" else (".exe",)
+    for suffix in suffixes:
+        if lowered.endswith(suffix):
+            return lowered[: -len(suffix)]
+    return lowered
+
+
 class RestrictedExecutor:
     """
     Tier-1 Restricted Executor: Enforces command allowlists, argument validation,
@@ -111,9 +124,7 @@ class RestrictedExecutor:
 
     def validate_arguments(self, binary: str, args: List[str]) -> Optional[str]:
         """Reject interpreter modes that execute arbitrary inline or user-supplied code."""
-        name = Path(binary).name.lower()
-        if name.endswith(".exe"):
-            name = name[:-4]
+        name = _strip_executable_suffix(Path(binary).name)
         if name in self.interpreter_modules:
             if not args:
                 return "Interpreter invocation requires an explicitly permitted module."
@@ -249,7 +260,7 @@ class RestrictedExecutor:
             )
 
         base = executable.lower()
-        base_no_ext = base[:-4] if base.endswith(".exe") else base
+        base_no_ext = _strip_executable_suffix(base)
         if base not in self.binary_allowlist and base_no_ext not in self.binary_allowlist:
             return VerificationResult(
                 status="NOT VERIFIED",
@@ -270,12 +281,8 @@ class RestrictedExecutor:
             )
 
         resolved_path = Path(resolved)
-        resolved_name = resolved_path.name.lower()
-        requested_name = executable.lower()
-        if resolved_name.endswith(".exe"):
-            resolved_name = resolved_name[:-4]
-        if requested_name.endswith(".exe"):
-            requested_name = requested_name[:-4]
+        resolved_name = _strip_executable_suffix(resolved_path.name)
+        requested_name = _strip_executable_suffix(executable)
         if resolved_name != requested_name:
             return VerificationResult(
                 status="FAIL",

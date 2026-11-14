@@ -337,18 +337,20 @@ def verify_prerequisites(workspace_path: Path) -> bool:
     return True
 
 
-def execute_workflow(workspace_path: Path, dry_run: bool = False) -> dict:
+def execute_workflow(workspace_path: Path, dry_run: bool = False, quiet: bool = False) -> dict:
     \"\"\"Executes deterministic workflow stages.\"\"\"
     stages = {stages_json}
     if dry_run:
-        print(f"[{skill_name}] [DRY-RUN] Verified execution plan across {{len(stages)}} stages:")
-        for s in stages:
-            print(f"[{skill_name}]  [PLAN] {{s['stage']}}")
+        if not quiet:
+            print(f"[{skill_name}] [DRY-RUN] Verified execution plan across {{len(stages)}} stages:")
+            for s in stages:
+                print(f"[{skill_name}]  [PLAN] {{s['stage']}}")
         return {{"status": "DRY_RUN_OK", "stages": stages, "dry_run": True}}
 
-    print(f"[{skill_name}] Executing workflow stages...")
-    for s in stages:
-        print(f"[{skill_name}]  Stage [{{s['stage']}}] -> {{s['status']}}")
+    if not quiet:
+        print(f"[{skill_name}] Executing workflow stages...")
+        for s in stages:
+            print(f"[{skill_name}]  Stage [{{s['stage']}}] -> {{s['status']}}")
 
     # Honest execution status: Reports skeleton state until domain logic is provided
     return {{
@@ -371,10 +373,13 @@ def main():
 
     if args.check:
         ok = verify_prerequisites(ws)
-        print(f"[{skill_name}] Prerequisite checks: {{'OK' if ok else 'FAILED'}}")
+        if args.json:
+            print(json.dumps({{"workspace": str(ws), "prerequisites_ok": ok, "status": "OK" if ok else "FAILED"}}, indent=2))
+        else:
+            print(f"[{skill_name}] Prerequisite checks: {{'OK' if ok else 'FAILED'}}")
         return 0 if ok else 1
 
-    result = execute_workflow(ws, dry_run=args.dry_run)
+    result = execute_workflow(ws, dry_run=args.dry_run, quiet=args.json)
 
     if args.json:
         print(json.dumps(result, indent=2))
@@ -713,8 +718,9 @@ def main():
         "--update-existing",
         dest="update_existing",
         action="store_true",
-        help="Update an existing generated skill with atomic replacement",
+        help="Replace the entire existing skill directory atomically (removes any unbundled/obsolete files inside it)",
     )
+    parser.add_argument("--json", action="store_true", help="Output pure JSON result")
 
     args = parser.parse_args()
     res = synthesize_skill(
@@ -724,6 +730,10 @@ def main():
         dry_run=args.dry_run,
         force=args.update_existing,
     )
+
+    if args.json:
+        print(json.dumps(res, indent=2))
+        sys.exit(0 if res.get("success") else 1)
 
     print("================================================================================")
     print("         AUTONOMOUS SKILL SYNTHESIS ENGINE (ATOMIC DEPLOYMENT)                  ")

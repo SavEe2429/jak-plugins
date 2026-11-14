@@ -51,7 +51,7 @@ def detect_topology(root: Path, rules: Optional[List[Dict[str, Any]]] = None) ->
     for rule in active_rules:
         topo = rule.get("topology", "unknown")
         # Check any_markers
-        if any(root.glob(marker) for marker in rule.get("any_markers", [])):
+        if any(next(root.glob(marker), None) is not None for marker in rule.get("any_markers", [])):
             return topo
         # Check all_markers and min_globs
         if "all_markers" in rule:

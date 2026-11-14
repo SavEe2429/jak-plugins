@@ -13,7 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Bumped bundled `skill-factory` skill from `v4.14.0` to `v4.15.0`.
+- Bumped bundled `project-scaffolder` skill from `v3.16.1` to `v3.16.2`.
+- Bumped bundled `skill-factory` skill from `v4.14.0` to `v4.15.0` and `v4.15.1`.
+- Clarified `--update-existing` full-directory atomic replacement semantics in `skill-factory` (`SKILL.md`, `skill_synthesizer.py`) and distinguished high-severity vs critical scan verdicts in `security_scanner.py` (`SF-GAP-01..02`).
+- Added non-software/unknown-stack guidance, `reason` diagnostics in policy audit outputs, clearer `--license-evidence` error messages, embedded Categories `14`/`15` audit requirements, and `toolchain.python-version` alias resolution in `project-scaffolder` (`PS-GAP-01..04`).
+
+### Fixed
+
+- Released `project-scaffolder v3.16.2` (`PS-BUG-01..06`, `PS-GAP-01..04`): fixed `discover.py` `detect_topology()` `Path.glob()` generator truthiness bug returning `MONOREPO` on empty/single-stack dirs; handled `plan.unresolved` (`COMPOSITION BLOCKED` exit 2) and rejected simultaneous `architecture.*` selections; fixed `esp_idf.json` missing `CMakeLists.txt`/`main/CMakeLists.txt`/`sdkconfig` markers, broken `run: |;` YAML, and missing `idf.py build`/`idf.py test` and `pio test -e native` CI steps; normalized Windows `.cmd`/`.bat`/`.com` executable shims in `safe_executor.py`; preserved `verification_checks` in conflict-free provider compositions; and distinguished directory vs file module boundary glob labels in `profile_adapter.py`.
+- Released `skill-factory v4.15.1` (`SF-BUG-01..10`, `SF-GAP-01..03`): fixed Thai/English negated phrase handling in `classify_domain_class()`; forwarded `--facets`/`--exclude-facets` into `--compose`; fixed `excluded_terms` matching against `positive_text`; restored `track_c` MCP search queries under `track_b_mcp_servers` and removed duplicate query terms; ensured clean `--json` stdout across `scaffold_skill.py` and generated `run.py`; expanded `validation` keywords (`tests`, `playwright`, `e2e`, `pytest`, `unittest`, `vitest`, `cypress`) while preserving negative-context `SURVEY_WRITING`; eliminated Mermaid self-loops and honored `--facets` / open-domain custom facets / `--domain general` in `capability_composer.py`; fixed Gate 3 inline/`--rule` step counting, hyphenated `WHEN TO USE`/`WHEN NOT TO USE` parsing, single-keyword negative boundaries, and Gate 4 conflict reporting in `deduplication_engine.py`; fixed empty-keyword rationale truncation in `capability_matcher.py`; added `argparse` CLIs to `agent_adapter.py` and `deduplication_engine.py`; and wired multi-subproject & embedded infrastructure evidence auditing in `scaffold_skill.py`.
 
 ## [1.1.0] - 2026-11-11
 
